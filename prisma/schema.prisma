@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  createdAt DateTime @default(now())
+}
+
+model Business {
+  id           String          @id @default(cuid())
+  name         String
+  description  String?
+  contactPhone String?
+  whatsapp     String?
+  email        String?
+  address      String?
+  openingHours String?
+  website      String?
+  instagram    String?
+  facebook     String?
+  linkedin     String?
+  createdAt    DateTime        @default(now())
+  profile      DigitalProfile?
+  knowledge    KnowledgeBase[]
+  conversations Conversation[]
+}
+
+model DigitalProfile {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  businessId  String   @unique
+  business    Business @relation(fields: [businessId], references: [id])
+  tags        Tag[]
+}
+
+model Tag {
+  id           String @id @default(cuid())
+  identifier   String @unique
+  status       String @default("active")
+  profileId    String?
+  profile      DigitalProfile? @relation(fields: [profileId], references: [id])
+}
+
+model KnowledgeBase {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+}
+
+model Conversation {
+  id         String   @id @default(cuid())
+  businessId String
+  from       String
+  state      String   @default("open")
+  messages   Message[]
+  createdAt  DateTime @default(now())
+  business   Business @relation(fields: [businessId], references: [id])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  from           String
+  text           String
+  isFromAI       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+}

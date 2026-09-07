@@ -1,0 +1,1 @@
+export const ADMIN_SESSION_COOKIE = 'telar_admin_session'
