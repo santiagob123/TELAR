@@ -1,8 +1,6 @@
 import { FormEvent, useState } from 'react'
-import { useRouter } from 'next/router'
 
 export default function AdminLogin() {
-  const router = useRouter()
   const [token, setToken] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +14,7 @@ export default function AdminLogin() {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
         body: JSON.stringify({ token })
       })
       if (!response.ok) {
@@ -23,7 +22,7 @@ export default function AdminLogin() {
         throw new Error(data.error || 'No se pudo iniciar sesión.')
       }
       setToken('')
-      await router.push('/admin')
+      window.location.assign('/admin')
     } catch (loginError: any) {
       setError(loginError.message || 'No se pudo iniciar sesión.')
     } finally {
