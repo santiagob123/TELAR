@@ -1,16 +1,34 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/router'
 import TagQr from '../../components/TagQr'
 
 type Profile = any
 
 export default function ProfileAdmin(){
+  const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [selected, setSelected] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [error, setError] = useState('')
 
-  useEffect(()=>{ fetch('/api/profiles').then(r=>r.json()).then(setProfiles) }, [])
+  useEffect(() => {
+    async function loadProfiles() {
+      const response = await fetch('/api/profiles')
+      if (response.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
+      const data = await response.json()
+      if (!response.ok || !Array.isArray(data)) {
+        setError(data?.error || 'No se pudieron cargar los perfiles.')
+        return
+      }
+      setProfiles(data)
+    }
+    loadProfiles().catch(() => setError('No se pudieron cargar los perfiles.'))
+  }, [router])
 
   async function save(e:any){
     e.preventDefault()
@@ -36,6 +54,10 @@ export default function ProfileAdmin(){
         }) 
       })
       const data = await res.json()
+      if (res.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
       if (!res.ok) throw new Error(data?.error || 'Error al guardar')
       setProfiles(p=>p.map(x=> x.id===data.id ? data : x))
       setSelected(data)
@@ -60,6 +82,10 @@ export default function ProfileAdmin(){
         body: JSON.stringify({ status: nextStatus })
       })
       const data = await res.json()
+      if (res.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
       if (!res.ok) throw new Error(data?.error || 'No se pudo cambiar el estado del TAG')
 
       setProfiles(prev => prev.map((profile: any) => {
@@ -94,6 +120,7 @@ export default function ProfileAdmin(){
         <div className="surface p-5">
           <h2 className="font-bold">Tus negocios</h2>
           <p className="muted mt-1 text-sm">Selecciona uno para editar su información pública.</p>
+          {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {profiles.length === 0 ? (
             <div className="py-6 text-center">
               <p className="muted text-sm mb-3">No hay negocios aún</p>

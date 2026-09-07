@@ -1,10 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { canUseAdminApis, hasValidAdminSession } from './admin-session'
+import { hasValidAdminSession } from './admin-session'
 
 export function requireAdminToken(req: NextApiRequest, res: NextApiResponse) {
   const configuredToken = process.env.ADMIN_TOKEN
-
-  if (!configuredToken && canUseAdminApis()) return true
 
   if (hasValidAdminSession(req.cookies.telar_admin_session)) return true
 

@@ -1,14 +1,17 @@
 import { useEffect, useState, useRef } from 'react'
+import { useRouter } from 'next/router'
 
 type Message = { id?: string; from: string; text: string; isFromAI?: boolean }
 
 export default function AIAdmin(){
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [businessId, setBusinessId] = useState<string | null>(null)
   const [convId, setConvId] = useState<string | null>(null)
   const [requiresHuman, setRequiresHuman] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const sendingRef = useRef(false)
 
@@ -17,16 +20,16 @@ export default function AIAdmin(){
     async function setup() {
       try {
         // First, try to initialize
-        await fetch('/api/ai/init')
-        
-        // Then fetch profiles
-        const res = await fetch('/api/profiles')
-        const data = await res.json()
-        if (Array.isArray(data) && data.length > 0) {
-          setBusinessId(data[0].businessId)
+        const initResponse = await fetch('/api/ai/init')
+        const initData = await initResponse.json()
+        if (initResponse.status === 401) {
+          await router.replace('/admin/login')
+          return
         }
-      } catch (e) {
-        console.error('Setup error:', e)
+        if (!initResponse.ok || typeof initData.businessId !== 'string') throw new Error(initData?.error || 'No se pudo preparar el contexto de TELAR AI.')
+        setBusinessId(initData.businessId)
+      } catch (e: any) {
+        setError(e.message || 'No se pudo preparar el asistente.')
       }
     }
     setup()
@@ -48,6 +51,11 @@ export default function AIAdmin(){
       const startedAt = Date.now()
       const res = await fetch('/api/ai/message', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ businessId, from: '+demo', text }) })
       const data = await res.json()
+      if (res.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
+      if (!res.ok) throw new Error(data?.error || 'No se pudo procesar el mensaje.')
       const remainingDelay = Math.max(0, 500 - (Date.now() - startedAt))
       if (remainingDelay > 0) await new Promise(resolve => setTimeout(resolve, remainingDelay))
       // show AI reply
@@ -63,6 +71,8 @@ export default function AIAdmin(){
       } else {
         setRequiresHuman(false)
       }
+    } catch (sendError: any) {
+      setError(sendError.message || 'No se pudo procesar el mensaje.')
     } finally {
       sendingRef.current = false
       setIsLoading(false)
@@ -76,7 +86,11 @@ export default function AIAdmin(){
 
   async function markHuman(){
     if (!convId) return
-    await fetch(`/api/ai/conversations/${convId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: 'human' }) })
+    const response = await fetch(`/api/ai/conversations/${convId}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: 'human' }) })
+    if (response.status === 401) {
+      await router.replace('/admin/login')
+      return
+    }
     setRequiresHuman(true)
   }
 
@@ -85,17 +99,18 @@ export default function AIAdmin(){
       <div className="mb-7">
         <p className="eyebrow mb-3">TELAR AI</p>
         <h1 className="text-3xl font-bold">Asistente para conversaciones</h1>
-        <p className="muted mt-3 max-w-2xl leading-7">Prueba cómo responde el asistente a preguntas habituales y cuándo deriva la conversación a una persona.</p>
+        <p className="muted mt-3 max-w-2xl leading-7">Prueba el asistente TELAR AI y revisa cómo deriva una conversación a una persona. Esta pantalla usa una simulación interna; no representa una integración real con WhatsApp.</p>
       </div>
       <div className="mb-4 flex flex-wrap gap-2">
         <button onClick={()=>sendPreset('¿Cuál es el horario?')} className="rounded-full border border-[#cbd9d6] bg-white px-4 py-2 text-sm font-semibold text-[#075c59] transition hover:bg-[#e9f2ef]">Consultar horario</button>
         <button onClick={()=>sendPreset('¿Cuál es el contacto?')} className="rounded-full border border-[#cbd9d6] bg-white px-4 py-2 text-sm font-semibold text-[#075c59] transition hover:bg-[#e9f2ef]">Consultar contacto</button>
         <button onClick={()=>sendPreset('¿Cuál es el precio?')} className="rounded-full border border-[#cbd9d6] bg-white px-4 py-2 text-sm font-semibold text-[#075c59] transition hover:bg-[#e9f2ef]">Consultar precio</button>
       </div>
+      {error && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
 
       <div className="surface flex h-[28rem] flex-col p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between border-b border-[#dfe7e5] pb-3">
-          <div><p className="text-sm font-bold">Conversación de prueba</p><p className="muted text-xs">Canal WhatsApp · modo demo</p></div>
+          <div><p className="text-sm font-bold">Prueba del asistente</p><p className="muted text-xs">Simulación interna · sin integración real con WhatsApp</p></div>
           <span className="flex items-center gap-1.5 text-xs font-semibold text-[#4d6c25]"><span className="h-2 w-2 rounded-full bg-[#7aaa3e]"></span>Activo</span>
         </div>
         <div className="flex-1 overflow-auto" ref={listRef}>
@@ -123,7 +138,7 @@ export default function AIAdmin(){
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-        <div className="muted">Negocio conectado: <strong className="text-[#17232b]">{businessId ? 'Demo TELAR' : 'Buscando...'}</strong></div>
+        <div className="muted">Contexto de prueba: <strong className="text-[#17232b]">{businessId ? 'TELAR AI demo' : 'Preparando...'}</strong></div>
         {requiresHuman && <div className="rounded-full bg-[#fff0ee] px-3 py-1.5 font-semibold text-[#a33b32]">Atención humana necesaria</div>}
         <button onClick={markHuman} className="ml-auto rounded-lg border border-[#e3b3ae] px-3 py-2 font-semibold text-[#a33b32] transition hover:bg-[#fff0ee]">Derivar a una persona</button>
       </div>

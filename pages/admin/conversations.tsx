@@ -1,13 +1,33 @@
 import useSWR from 'swr'
 import { useCallback } from 'react'
+import { useEffect } from 'react'
+import { useRouter } from 'next/router'
 
-const fetcher = (url:string)=> fetch(url).then(r=>r.json())
+const fetcher = async (url:string) => {
+  const response = await fetch(url)
+  const data = await response.json()
+  if (!response.ok) {
+    const error: any = new Error(data?.error || 'No se pudieron cargar las conversaciones.')
+    error.status = response.status
+    throw error
+  }
+  return data
+}
 
 export default function Conversations(){
-  const { data, mutate } = useSWR('/api/ai/conversations', fetcher)
+  const router = useRouter()
+  const { data, error, mutate } = useSWR('/api/ai/conversations', fetcher)
+
+  useEffect(() => {
+    if (error?.status === 401) router.replace('/admin/login')
+  }, [error, router])
 
   const markHuman = useCallback(async (id:string)=>{
-    await fetch(`/api/ai/conversations/${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: 'human' }) })
+    const response = await fetch(`/api/ai/conversations/${id}`, { method: 'PATCH', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ state: 'human' }) })
+    if (response.status === 401) {
+      await router.replace('/admin/login')
+      return
+    }
     mutate()
   }, [mutate])
 
@@ -18,6 +38,7 @@ export default function Conversations(){
         <h1 className="text-3xl font-bold">Conversaciones</h1>
         <p className="muted mt-2">Revisa las interacciones y decide cuándo necesita intervenir tu equipo.</p>
       </div>
+      {error && error.status !== 401 && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error.message}</p>}
       <div className="space-y-4">
         {data?.map((c:any)=> (
           <div key={c.id} className="surface p-5">

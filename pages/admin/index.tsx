@@ -9,9 +9,9 @@ export default function Admin() {
         <p className="muted mt-2">Elige un área para continuar con la demo.</p>
       </div>
 
-      {/* Flujo principal de TELAR TAG */}
+      {/* MVP TAG */}
       <div className="mb-10">
-        <h2 className="font-semibold mb-4 text-sm eyebrow">FLUJO PRINCIPAL - TELAR TAG</h2>
+        <h2 className="font-semibold mb-4 text-sm eyebrow">TELAR TAG</h2>
         <div className="grid gap-4 sm:grid-cols-3 mb-6">
           <Link href="/admin/tags" className="surface block p-5 no-underline transition hover:-translate-y-1 hover:shadow-lg">
             <span className="text-3xl">✚</span>
@@ -27,23 +27,6 @@ export default function Admin() {
             <span className="text-3xl">▶</span>
             <h3 className="mt-4 text-lg font-bold">Ver experiencia</h3>
             <p className="muted mt-1 text-sm">3. Simula cómo ve tu cliente el TAG.</p>
-          </Link>
-        </div>
-      </div>
-
-      {/* Otras áreas (AI) */}
-      <div>
-        <h2 className="font-semibold mb-4 text-sm eyebrow">OTRAS FUNCIONALIDADES</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link href="/admin/ai" className="surface block p-5 no-underline transition hover:-translate-y-1">
-            <span className="text-2xl">✦</span>
-            <h2 className="mt-4 text-xl font-bold">Asistente IA</h2>
-            <p className="muted mt-1">Prueba respuestas en WhatsApp.</p>
-          </Link>
-          <Link href="/admin/conversations" className="surface block p-5 no-underline transition hover:-translate-y-1">
-            <span className="text-2xl">•••</span>
-            <h2 className="mt-4 text-xl font-bold">Conversaciones</h2>
-            <p className="muted mt-1">Consulta y deriva conversaciones.</p>
           </Link>
         </div>
       </div>

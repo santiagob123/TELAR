@@ -1,0 +1,1 @@
+export const AI_SESSION_COOKIE = 'telar_ai_session'
