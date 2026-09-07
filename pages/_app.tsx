@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import AdminNav from '../components/AdminNav'
 import AiNav from '../components/AiNav'
+import ChatBubble from '../components/ChatBubble'
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter()
@@ -27,6 +28,7 @@ export default function App({ Component, pageProps }: AppProps) {
         {router.pathname.startsWith('/ai') && router.pathname !== '/ai/login' && <AiNav />}
         <Component {...pageProps} />
       </main>
+      {!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/ai') && router.pathname !== '/chat' && <ChatBubble />}
     </div>
   )
 }
