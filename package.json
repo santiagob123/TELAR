@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
@@ -22,6 +22,8 @@
   },
   "devDependencies": {
     "@types/react": "18.2.21",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "autoprefixer": "10.4.14",
     "eslint": "8.46.0",
     "eslint-plugin-react": "^7.37.5",
