@@ -22,6 +22,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const context = await getAIContext()
+    console.info('[TELAR AI] public_chat', {
+      businessId: context.id,
+      businessName: context.name,
+      sessionIdLength: sessionId.length,
+      messageChars: text.trim().length
+    })
     const result = await handleIncoming(context.id, `public:${sessionId}`, text.trim())
     return res.status(200).json({ conversationId: result.conv.id, aiReply: result.aiReply })
   } catch (error) {

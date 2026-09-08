@@ -30,6 +30,8 @@ npm run prisma:migrate
 npm run seed
 ```
 
+El seed es idempotente: asegura los datos demo de TAG sin borrar datos existentes y carga o actualiza el conocimiento inicial del Business técnico `TELAR AI` en `KnowledgeBase`.
+
 4. Ejecutar en desarrollo:
 
 ```bash
@@ -41,6 +43,8 @@ Cómo probar:
 - Simulador NFC: http://localhost:3000/tag/simulate
 - Admin: http://localhost:3000/admin → crear perfiles y tags.
 - AI: Usar el simulador POST http://localhost:3000/api/ai/message con JSON { businessId, from, text } o usar la UI en `/admin/conversations`.
+
+El chat público `/chat` utiliza automáticamente el Business técnico `TELAR AI` y su KnowledgeBase; no requiere `tagId` ni `businessId` desde el frontend.
 
 Modo DEMO:
 - Si `OPENAI_API_KEY` no está definida, el servicio AI caerá en modo demo con respuestas simples.

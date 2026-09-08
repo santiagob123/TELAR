@@ -1,21 +1,17 @@
 import { PrismaClient } from '@prisma/client'
+import { getAIContext } from '../services/ai/context'
+import { ensureTelarAIKnowledge } from '../services/ai/knowledge'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  try {
-    // Clean up old data
-    await prisma.message.deleteMany({})
-    await prisma.conversation.deleteMany({})
-    await prisma.tag.deleteMany({})
-    await prisma.knowledgeBase.deleteMany({})
-    await prisma.digitalProfile.deleteMany({})
-    await prisma.business.deleteMany({})
-    
-    console.log('✓ Cleaned up old data')
+async function ensureDemoTagData() {
+  let demoBusiness = await prisma.business.findFirst({
+    where: { name: 'Demo Negocio' },
+    include: { profile: true }
+  })
 
-    // Create business with all relations
-    const b = await prisma.business.create({
+  if (!demoBusiness) {
+    demoBusiness = await prisma.business.create({
       data: {
         name: 'Demo Negocio',
         description: 'Negocio demo para TELAR',
@@ -35,25 +31,46 @@ async function main() {
           ]
         }
       },
-      include: { profile: true, knowledge: true }
+      include: { profile: true }
     })
-    
-    console.log('✓ Business created:', b.name, '(ID:', b.id + ')')
-    console.log('✓ Profile created:', b.profile?.id)
-    console.log('✓ Knowledge Base items:', b.knowledge.length)
+  }
 
-    // Create tag
-    await prisma.tag.create({ 
-      data: { 
-        identifier: 'demo123', 
-        profileId: b.profile!.id 
-      } 
+  if (!demoBusiness.profile) {
+    demoBusiness = await prisma.business.update({
+      where: { id: demoBusiness.id },
+      data: {
+        profile: {
+          create: {
+            title: 'Demo Perfil',
+            description: 'Perfil de demostración',
+            imageUrl: ''
+          }
+        }
+      },
+      include: { profile: true }
     })
-    
-    console.log('✓ Tag created: demo123')
+  }
+
+  const tag = await prisma.tag.findUnique({ where: { identifier: 'demo123' } })
+  if (!tag && demoBusiness.profile) {
+    await prisma.tag.create({
+      data: { identifier: 'demo123', profileId: demoBusiness.profile.id }
+    })
+  }
+
+  console.log('✓ TAG demo data ensured:', demoBusiness.name)
+}
+
+async function main() {
+  try {
+    await ensureDemoTagData()
+    const aiContext = await getAIContext()
+    const knowledge = await ensureTelarAIKnowledge(aiContext.id)
+    console.log('✓ TELAR AI context:', aiContext.name, '(ID:', aiContext.id + ')')
+    console.log('✓ TELAR AI Knowledge Base items:', knowledge.length)
+
     console.log('\n🎉 Seed completed successfully!')
-    console.log('Business ID:', b.id)
-    console.log('Ready to use TELAR AI')
+    console.log('TELAR AI knowledge loaded idempotently')
   } catch (error) {
     console.error('❌ Seed error:', error)
     process.exit(1)
