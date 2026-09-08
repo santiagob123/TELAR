@@ -24,6 +24,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
-  res.setHeader('Set-Cookie', `${AI_SESSION_COOKIE}=${createAiSession(configuredToken)}; Path=/; HttpOnly; SameSite=Lax${secure}`)
+  res.setHeader('Set-Cookie', `${AI_SESSION_COOKIE}=${createAiSession(configuredToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${secure}`)
   res.status(204).end()
 }
