@@ -5,6 +5,7 @@ import Link from 'next/link'
 export default function SimulateTag(){
   const [id, setId] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
   
   function go(e:any){ 
@@ -13,7 +14,8 @@ export default function SimulateTag(){
       setError('Ingresa un identificador válido')
       return
     }
-    router.push(`/tag/${id}`) 
+    setLoading(true)
+    router.push(`/tag/${id}`)
   }
 
   return (
@@ -39,8 +41,8 @@ export default function SimulateTag(){
             <p className="muted text-xs mt-2">Lo encontrarás en el panel de administración cuando crees un negocio.</p>
             {error && <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{error}</div>}
           </div>
-          <button className="w-full rounded-lg bg-[#087f78] px-4 py-3 font-semibold text-white transition hover:bg-[#075c59]">
-            Ver experiencia
+          <button disabled={loading} className="w-full rounded-lg bg-[#087f78] px-4 py-3 font-semibold text-white transition hover:bg-[#075c59] disabled:cursor-wait disabled:opacity-70">
+            {loading ? 'Abriendo experiencia...' : 'Ver experiencia'}
           </button>
         </div>
       </form>
