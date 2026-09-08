@@ -7,11 +7,12 @@ export type AIProviderMessage = {
 
 const DEFAULT_OPENAI_MODEL = 'gpt-4o'
 const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
+const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash'
 const PROVIDER_TIMEOUT_MS = 30000
 
-function getConfiguredProvider(): 'ollama' | 'openai' | 'fallback' {
+function getConfiguredProvider(): 'ollama' | 'openai' | 'gemini' | 'fallback' {
   const configured = (process.env.AI_PROVIDER || '').trim().toLowerCase()
-  if (configured === 'ollama' || configured === 'openai' || configured === 'fallback') {
+  if (configured === 'ollama' || configured === 'openai' || configured === 'gemini' || configured === 'fallback') {
     return configured
   }
 
@@ -29,6 +30,12 @@ function getOllamaConfig() {
   const baseUrl = (process.env.OLLAMA_BASE_URL || DEFAULT_OLLAMA_BASE_URL).trim().replace(/\/$/, '')
   const model = (process.env.OLLAMA_MODEL || '').trim()
   return { baseUrl, model }
+}
+
+function getGeminiConfig() {
+  const apiKey = process.env.GEMINI_API_KEY?.trim() || ''
+  const model = (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL).trim() || DEFAULT_GEMINI_MODEL
+  return { apiKey, model }
 }
 
 async function generateWithOllama(messages: AIProviderMessage[]): Promise<string> {
@@ -72,6 +79,79 @@ async function generateWithOpenAI(messages: AIProviderMessage[]): Promise<string
   return reply
 }
 
+async function generateWithGemini(messages: AIProviderMessage[]): Promise<string> {
+  const { apiKey, model } = getGeminiConfig()
+  if (!apiKey) throw new Error('GEMINI_API_KEY no está configurada')
+
+  const systemMessage = messages.find(message => message.role === 'system')
+  const contents = messages
+    .filter(message => message.role !== 'system')
+    .map(message => ({
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: message.content }]
+    }))
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        ...(systemMessage ? {
+          systemInstruction: {
+            parts: [{ text: systemMessage.content }]
+          }
+        } : {}),
+        contents
+      }),
+      signal: controller.signal
+    })
+
+    if (!response.ok) {
+      const errorBody = await response.text()
+      let errorMessage = 'Respuesta de error sin detalle'
+
+      try {
+        const parsed = JSON.parse(errorBody) as {
+          error?: { message?: string; status?: string; code?: number }
+        }
+        const providerError = parsed.error
+        errorMessage = [
+          providerError?.message,
+          providerError?.status,
+          providerError?.code ? `code ${providerError.code}` : undefined
+        ].filter(Boolean).join(' | ') || errorMessage
+      } catch {
+        if (errorBody.trim()) errorMessage = errorBody.trim().slice(0, 300)
+      }
+
+      console.error('[TELAR AI] gemini_http_error', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorMessage
+      })
+      throw new Error(`Gemini respondió HTTP ${response.status}`)
+    }
+
+    const data = await response.json() as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+    }
+    const reply = data.candidates?.[0]?.content?.parts
+      ?.map(part => part.text || '')
+      .join('')
+      .trim()
+    if (!reply) throw new Error('Gemini devolvió una respuesta vacía')
+    return reply
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 export function getAIProvider() {
   return getConfiguredProvider()
 }
@@ -80,5 +160,6 @@ export async function generateAIResponse(messages: AIProviderMessage[]): Promise
   const provider = getConfiguredProvider()
   if (provider === 'ollama') return generateWithOllama(messages)
   if (provider === 'openai') return generateWithOpenAI(messages)
+  if (provider === 'gemini') return generateWithGemini(messages)
   throw new Error('Proveedor configurado como fallback')
 }
