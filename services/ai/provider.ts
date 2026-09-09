@@ -8,7 +8,7 @@ export type AIProviderMessage = {
 const DEFAULT_OPENAI_MODEL = 'gpt-4o'
 const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash'
-const PROVIDER_TIMEOUT_MS = 30000
+const PROVIDER_TIMEOUT_MS = 60000
 
 function getConfiguredProvider(): 'ollama' | 'openai' | 'gemini' | 'fallback' {
   const configured = (process.env.AI_PROVIDER || '').trim().toLowerCase()
@@ -93,6 +93,7 @@ async function generateWithGemini(messages: AIProviderMessage[]): Promise<string
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS)
+  const startedAt = Date.now()
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
@@ -130,12 +131,10 @@ async function generateWithGemini(messages: AIProviderMessage[]): Promise<string
         if (errorBody.trim()) errorMessage = errorBody.trim().slice(0, 300)
       }
 
-      console.error('[TELAR AI] gemini_http_error', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorMessage
-      })
-      throw new Error(`Gemini respondió HTTP ${response.status}`)
+      const providerError = new Error(errorMessage) as Error & { status?: number; code?: number | string }
+      providerError.status = response.status
+      providerError.code = response.status
+      throw providerError
     }
 
     const data = await response.json() as {
@@ -146,7 +145,22 @@ async function generateWithGemini(messages: AIProviderMessage[]): Promise<string
       .join('')
       .trim()
     if (!reply) throw new Error('Gemini devolvió una respuesta vacía')
+    console.info('[TELAR AI] gemini_ok', {
+      model,
+      durationMs: Date.now() - startedAt,
+      replyChars: reply.length
+    })
     return reply
+  } catch (error: unknown) {
+    const providerError = error as { status?: number; code?: number | string; message?: string }
+    console.error('[TELAR AI] gemini_error', {
+      model,
+      durationMs: Date.now() - startedAt,
+      status: providerError.status ?? null,
+      code: providerError.code ?? null,
+      message: providerError.message || 'Error desconocido'
+    })
+    throw error
   } finally {
     clearTimeout(timeout)
   }
