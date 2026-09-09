@@ -46,6 +46,8 @@ Cómo probar:
 
 El chat público `/chat` utiliza automáticamente el Business técnico `TELAR AI` y su KnowledgeBase; no requiere `tagId` ni `businessId` desde el frontend.
 
+Integración privada con n8n: usa `POST /api/integrations/n8n/chat` con el header `x-n8n-secret` y un JSON `{ text, sessionId }`. El endpoint reutiliza el núcleo de TELAR AI y requiere `N8N_WEBHOOK_SECRET`; no acepta identificadores de TAG. Los reintentos de n8n pueden duplicar mensajes hasta que se añada una clave de idempotencia.
+
 Modo DEMO:
 - Si `OPENAI_API_KEY` no está definida, el servicio AI caerá en modo demo con respuestas simples.
 - `WHATSAPP_MODE=demo` usa el simulador interno.
