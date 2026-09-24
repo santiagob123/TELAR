@@ -1,8 +1,29 @@
 import prisma from '../../lib/prisma'
-import { ensureTelarAIKnowledge } from './knowledge'
+import { ensureTelarAIKnowledge, TELAR_AI_KNOWLEDGE } from './knowledge'
 
 const AI_CONTEXT_NAME = 'TELAR AI'
-const AI_CONTEXT_DESCRIPTION = 'Contexto independiente del MVP TELAR AI'
+const AI_CONTEXT_DESCRIPTION = 'Contexto técnico y productivo del MVP TELAR AI'
+
+function getKnowledgeSyncState(knowledge: Array<{ title: string; content: string }>) {
+  const official = new Map(TELAR_AI_KNOWLEDGE.map(item => [item.title, item.content]))
+  const existing = new Map(knowledge.map(item => [item.title, item.content]))
+
+  let missing = false
+  let stale = false
+
+  for (const [title, content] of official.entries()) {
+    const current = existing.get(title)
+    if (!current) {
+      missing = true
+      continue
+    }
+    if (current !== content) {
+      stale = true
+    }
+  }
+
+  return { missing, stale }
+}
 
 export async function getAIContext() {
   // El contexto de TELAR AI no tiene DigitalProfile (eso es TELAR TAG).
@@ -14,21 +35,34 @@ export async function getAIContext() {
     },
     include: { knowledge: true }
   })
+
   if (existing) {
     const kbChars = existing.knowledge.reduce((sum, item) => sum + item.title.length + item.content.length, 0)
-    console.info('[TELAR AI] context', {
+    const syncState = getKnowledgeSyncState(existing.knowledge)
+
+    if (syncState.missing || syncState.stale) {
+      const refreshedKnowledge = await ensureTelarAIKnowledge(existing.id)
+      console.info('[TELAR AI] context_syncing', {
+        businessId: existing.id,
+        businessName: existing.name,
+        missing: syncState.missing,
+        stale: syncState.stale,
+        previousKbCount: existing.knowledge.length,
+        nextKbCount: refreshedKnowledge.length,
+        kbContentChars: kbChars
+      })
+      return { ...existing, knowledge: refreshedKnowledge }
+    }
+
+    console.info('[TELAR AI] context_ok', {
       businessId: existing.id,
       businessName: existing.name,
       kbExists: existing.knowledge.length > 0,
       kbCount: existing.knowledge.length,
-      kbContentChars: kbChars
+      kbContentChars: kbChars,
+      synced: false
     })
-    if (existing.knowledge.length === 0) {
-      console.warn('[TELAR AI] context_empty_kb', {
-        businessId: existing.id,
-        hint: 'Ejecuta npm run seed para cargar el conocimiento inicial de TELAR AI.'
-      })
-    }
+
     return existing
   }
 
@@ -44,7 +78,8 @@ export async function getAIContext() {
   console.info('[TELAR AI] context_created', {
     businessId: created.id,
     businessName: created.name,
-    kbCount: knowledge.length
+    kbCount: knowledge.length,
+    synced: true
   })
   return { ...created, knowledge }
 }

@@ -44,7 +44,7 @@ Cómo probar:
 - Admin: http://localhost:3000/admin → crear perfiles y tags.
 - AI: Usar el simulador POST http://localhost:3000/api/ai/message con JSON { businessId, from, text } o usar la UI en `/admin/conversations`.
 
-El chat público `/chat` utiliza automáticamente el Business técnico `TELAR AI` y su KnowledgeBase; no requiere `tagId` ni `businessId` desde el frontend.
+El ChatBubble público en `/` utiliza automáticamente el Business técnico `TELAR AI` y su KnowledgeBase; `/chat` redirige a `/` y no requiere `tagId` ni `businessId` desde el frontend.
 
 Integración privada con n8n: usa `POST /api/integrations/n8n/chat` con el header `x-n8n-secret` y un JSON `{ text, sessionId }`. El endpoint reutiliza el núcleo de TELAR AI y requiere `N8N_WEBHOOK_SECRET`; no acepta identificadores de TAG. Los reintentos de n8n pueden duplicar mensajes hasta que se añada una clave de idempotencia.
 

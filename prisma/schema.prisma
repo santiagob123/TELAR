@@ -14,6 +14,7 @@ model User {
   name      String?
   password  String?
   createdAt DateTime @default(now())
+  businesses Business[]
 }
 
 model Business {
@@ -30,6 +31,8 @@ model Business {
   facebook     String?
   linkedin     String?
   createdAt    DateTime        @default(now())
+  ownerId      String?
+  owner        User?           @relation(fields: [ownerId], references: [id])
   profile      DigitalProfile?
   knowledge    KnowledgeBase[]
   conversations Conversation[]
