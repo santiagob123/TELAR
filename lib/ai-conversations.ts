@@ -55,7 +55,7 @@ function parseDateOnly(value: string | undefined, endOfDay = false) {
   return new Date(localWallClock - getTimeZoneOffset(localDate))
 }
 
-export async function getFilteredConversations(fromValue?: string, toValue?: string) {
+export async function getFilteredConversations(ownerId: string, fromValue?: string, toValue?: string) {
   const fromDate = parseDateOnly(fromValue)
   const toDate = parseDateOnly(toValue, true)
 
@@ -68,6 +68,7 @@ export async function getFilteredConversations(fromValue?: string, toValue?: str
   }
 
   const conversations = await prisma.conversation.findMany({
+    where: { business: { ownerId } },
     include: { messages: { orderBy: { createdAt: 'asc' } } }
   })
 

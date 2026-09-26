@@ -1,11 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import prisma from '../../../lib/prisma'
-import { requireAdminToken } from '../../../lib/admin-auth'
+import { getProfilesByOwner } from '../../../services/tag'
+import { requireAdminUser } from '../../../lib/admin-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
-    if (!requireAdminToken(req, res)) return
-    const profiles = await prisma.digitalProfile.findMany({ include: { business: true, tags: true } })
+    const ownerId = await requireAdminUser(req, res)
+    if (!ownerId) return
+    const profiles = await getProfilesByOwner(ownerId)
     return res.json(profiles)
   }
   res.status(405).end()

@@ -1,12 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ConversationDateFilterError, getFilteredConversations } from '../../../lib/ai-conversations'
-import { requireAiToken } from '../../../lib/ai-auth'
+import { requireAiUser } from '../../../lib/ai-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse){
-  if (!requireAiToken(req, res)) return
+  const ownerId = await requireAiUser(req, res)
+  if (!ownerId) return
 
   try {
     const conversations = await getFilteredConversations(
+      ownerId,
       typeof req.query.from === 'string' ? req.query.from : undefined,
       typeof req.query.to === 'string' ? req.query.to : undefined
     )

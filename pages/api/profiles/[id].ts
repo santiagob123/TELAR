@@ -1,12 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import prisma from '../../../lib/prisma'
-import { assertValidBusinessInput } from '../../../services/tag'
-import { requireAdminToken } from '../../../lib/admin-auth'
+import { assertValidBusinessInput, getOwnedProfile } from '../../../services/tag'
+import { requireAdminUser } from '../../../lib/admin-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
   if (req.method === 'PATCH') {
-    if (!requireAdminToken(req, res)) return
+    const ownerId = await requireAdminUser(req, res)
+    if (!ownerId) return
     const {
       title,
       description,
@@ -22,10 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } = req.body
 
     try {
-      const existing = await prisma.digitalProfile.findUnique({
-        where: { id: String(id) },
-        include: { business: true }
-      })
+      const existing = await getOwnedProfile(String(id), ownerId)
       if (!existing) return res.status(404).json({ error: 'Not found' })
 
       assertValidBusinessInput({

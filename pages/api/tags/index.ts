@@ -1,13 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createProfileAndTag } from '../../../services/tag'
-import { requireAdminToken } from '../../../lib/admin-auth'
+import { requireAdminUser } from '../../../lib/admin-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'POST') {
-    if (!requireAdminToken(req, res)) return
+    const ownerId = await requireAdminUser(req, res)
+    if (!ownerId) return
     const data = req.body
     try {
-      const result = await createProfileAndTag(data)
+      const result = await createProfileAndTag(data, ownerId)
       return res.status(201).json(result)
     } catch (e:any) {
       if (e?.code === 'VALIDATION_ERROR') return res.status(400).json({ error: e.message })

@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { requireAiToken } from '../../../lib/ai-auth'
+import { requireAiUser } from '../../../lib/ai-auth'
 import { getAIContext } from '../../../services/ai/context'
 
 /**
@@ -7,9 +7,10 @@ import { getAIContext } from '../../../services/ai/context'
  * This is a fallback in case the seed didn't run properly
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!requireAiToken(req, res)) return
+  const ownerId = await requireAiUser(req, res)
+  if (!ownerId) return
   try {
-    const business = await getAIContext()
+    const business = await getAIContext(ownerId)
 
     return res.json({
       success: true,

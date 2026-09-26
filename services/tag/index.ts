@@ -95,7 +95,7 @@ export function assertValidBusinessInput(data: any) {
   if (errors.length > 0) throw new TagValidationError(errors[0])
 }
 
-export async function createProfileAndTag(data: any) {
+export async function createProfileAndTag(data: any, ownerId: string) {
   assertValidBusinessInput(data)
 
   const businessData = {
@@ -123,6 +123,7 @@ export async function createProfileAndTag(data: any) {
       const business = await transaction.business.create({
         data: {
           ...businessData,
+          ownerId,
           profile: {
             create: {
               title: normalizeValue(data.title) ? String(normalizeValue(data.title)).trim() : businessData.name,
@@ -163,12 +164,31 @@ export async function getProfileByIdentifier(identifier: string) {
   return tag
 }
 
-export async function setTagStatusByIdentifier(identifier: string, status: string) {
+export async function getProfilesByOwner(ownerId: string) {
+  return prisma.digitalProfile.findMany({
+    where: { business: { ownerId } },
+    include: { business: true, tags: true }
+  })
+}
+
+export async function setTagStatusByIdentifier(identifier: string, status: string, ownerId: string) {
   const normalizedStatus = normalizeStatus(status)
-  const updatedTag = await prisma.tag.update({
-    where: { identifier },
-    data: { status: normalizedStatus }
+  const tag = await prisma.tag.findFirst({
+    where: { identifier, profile: { business: { ownerId } } },
+    select: { id: true }
   })
 
-  return updatedTag
+  if (!tag) return null
+
+  return prisma.tag.update({
+    where: { id: tag.id },
+    data: { status: normalizedStatus }
+  })
+}
+
+export async function getOwnedProfile(profileId: string, ownerId: string) {
+  return prisma.digitalProfile.findFirst({
+    where: { id: profileId, business: { ownerId } },
+    include: { business: true }
+  })
 }

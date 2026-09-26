@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getProfileByIdentifier, setTagStatusByIdentifier } from '../../../services/tag'
-import { requireAdminToken } from '../../../lib/admin-auth'
+import { requireAdminUser } from '../../../lib/admin-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
@@ -15,10 +15,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PATCH') {
-    if (!requireAdminToken(req, res)) return
+    const ownerId = await requireAdminUser(req, res)
+    if (!ownerId) return
     const { status } = req.body
     try {
-      const updated = await setTagStatusByIdentifier(String(id), status)
+      const updated = await setTagStatusByIdentifier(String(id), status, ownerId)
+      if (!updated) return res.status(404).json({ error: 'Not found' })
       return res.json(updated)
     } catch (error: any) {
       if (error?.code === 'P2025') return res.status(404).json({ error: 'Not found' })
