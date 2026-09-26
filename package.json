@@ -8,7 +8,8 @@
     "start": "next start",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "test:ownership": "node --test tests/ownership.test.cjs"
   },
   "dependencies": {
     "@prisma/client": "^5.13.0",
