@@ -3,7 +3,7 @@ import { usePublicChat } from './usePublicChat'
 
 export default function ChatBubble() {
   const [open, setOpen] = useState(false)
-  const { sessionId, text, setText, messages, loading, error, sendMessage } = usePublicChat()
+  const { sessionId, text, setText, messages, loading, waitingLong, error, sendMessage } = usePublicChat()
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const wasNearBottomRef = useRef(true)
@@ -41,7 +41,7 @@ export default function ChatBubble() {
               <span className="chat-bubble-brand-mark" aria-hidden="true">T</span>
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold tracking-wide">TELAR AI</p>
-                <p className="chat-bubble-status text-xs" aria-live="polite"><span className="chat-bubble-status-dot" aria-hidden="true" />{loading ? 'Preparando una respuesta...' : 'Asistente público'}</p>
+                <p className="chat-bubble-status text-xs" aria-live="polite"><span className="chat-bubble-status-dot" aria-hidden="true" />{loading ? waitingLong ? 'El modelo está tardando; puede tomar hasta 60 segundos...' : 'Preparando una respuesta...' : 'Asistente público'}</p>
               </div>
             </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Cerrar chat" className="chat-bubble-close" title="Cerrar chat">×</button>

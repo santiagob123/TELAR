@@ -1,5 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next'
+import { randomUUID } from 'crypto'
 import { generateAIResponse, getAIProvider } from '../../../../services/ai/provider'
+import { consumeRateLimit, RATE_LIMITS, respondRateLimited } from '../../../../lib/rate-limit'
+import prisma from '../../../../lib/prisma'
+import { getAIContext } from '../../../../services/ai/context'
 
 type Classification = {
   categoria: 'empleo' | 'spam' | 'red_social' | 'suscripcion' | 'factura' | 'promocion' | 'personal' | 'trabajo' | 'seguridad' | 'notificacion' | 'otro'
@@ -105,21 +109,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
+  try {
+    const rateLimit = await consumeRateLimit({
+      key: 'n8n:minute',
+      limit: RATE_LIMITS.n8nPerMin,
+      windowMs: 60_000
+    })
+    if (!rateLimit.allowed) return respondRateLimited(res, rateLimit.retryAfterSeconds)
+  } catch (error) {
+    console.error('[TELAR AI] n8n classify rate limit error:', error instanceof Error ? error.message : 'Error desconocido')
+    return res.status(503).json({ error: 'El servicio no está disponible temporalmente.' })
+  }
+
   const body = req.body
   if (!isRecord(body)) {
     return res.status(400).json({ error: 'Invalid payload' })
   }
 
-  const allowedKeys = new Set(['text', 'subject', 'from'])
+  const allowedKeys = new Set(['text', 'subject', 'from', 'externalId'])
   if (Object.keys(body).some(key => !allowedKeys.has(key))) {
     return res.status(400).json({ error: 'Invalid payload' })
   }
 
-  const { text, subject, from } = body
+  const { text, subject, from, externalId } = body
   if (
     typeof text !== 'string' || !text.trim() || text.trim().length > MAX_MESSAGE_LENGTH ||
     (subject !== undefined && typeof subject !== 'string') ||
-    (from !== undefined && typeof from !== 'string')
+    (from !== undefined && typeof from !== 'string') ||
+    (externalId !== undefined && (typeof externalId !== 'string' || !externalId.trim() || externalId.length > 200))
   ) {
     return res.status(400).json({ error: 'Invalid payload' })
   }
@@ -147,6 +164,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!classification) {
       return res.status(502).json({ error: 'AI classification failed' })
+    }
+
+    const context = await getAIContext()
+    if (typeof externalId === 'string') {
+      await prisma.$executeRaw`
+        INSERT INTO "EmailClassification" ("id", "businessId", "externalId", "categoria", "prioridad", "resumen", "requiereAccion", "accionSugerida")
+        VALUES (${randomUUID()}, ${context.id}, ${externalId.trim()}, ${classification.categoria}, ${classification.prioridad}, ${classification.resumen}, ${classification.requiere_accion}, ${classification.accion_sugerida})
+        ON CONFLICT ("businessId", "externalId") DO UPDATE SET
+          "categoria" = EXCLUDED."categoria",
+          "prioridad" = EXCLUDED."prioridad",
+          "resumen" = EXCLUDED."resumen",
+          "requiereAccion" = EXCLUDED."requiereAccion",
+          "accionSugerida" = EXCLUDED."accionSugerida"
+      `
+    } else {
+      await prisma.$executeRaw`
+        INSERT INTO "EmailClassification" ("id", "businessId", "categoria", "prioridad", "resumen", "requiereAccion", "accionSugerida")
+        VALUES (${randomUUID()}, ${context.id}, ${classification.categoria}, ${classification.prioridad}, ${classification.resumen}, ${classification.requiere_accion}, ${classification.accion_sugerida})
+      `
     }
 
     return res.status(200).json(classification)

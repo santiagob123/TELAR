@@ -16,7 +16,7 @@
 ## Parcial
 
 - Autenticación administrativa mediante `ADMIN_TOKEN`.
-- Ownership declarado en Prisma, pero no aplicado a queries ni APIs.
+- El ownership se aplica a las APIs privadas mediante `ADMIN_USER_ID` y `Business.ownerId`.
 
 ## Por verificar
 
@@ -26,7 +26,7 @@
 
 ## Hardening
 
-- Ownership declarado en Prisma, pero todavía no aplicado a queries ni APIs.
-- Autenticación administrativa mediante `ADMIN_TOKEN` global.
+- Los negocios históricos sin propietario deben asignarse mediante una operación controlada antes de usarlos desde el panel.
+- La autenticación continúa basada en un token global; todavía no existe login multiusuario.
 
 Ver: [[TELAR TAG - Arquitectura]] y [[Seguridad TAG]].

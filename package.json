@@ -8,9 +8,9 @@
     "start": "next start",
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:generate": "prisma generate",
-    "seed": "ts-node prisma/seed.ts",
-    "provision:user": "ts-node scripts/provision-user.ts",
-    "provision:ai-context": "ts-node scripts/provision-ai-context.ts",
+    "seed": "ts-node --project tsconfig.scripts.json prisma/seed.ts",
+    "provision:user": "ts-node --project tsconfig.scripts.json scripts/provision-user.ts",
+    "provision:ai-context": "ts-node --project tsconfig.scripts.json scripts/provision-ai-context.ts",
     "test:ownership": "node --test tests/ownership.test.cjs"
   },
   "dependencies": {
@@ -24,6 +24,7 @@
     "swr": "2.2.0"
   },
   "devDependencies": {
+    "@types/node": "26.6.5",
     "@types/react": "18.2.21",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",

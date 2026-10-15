@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import AdminNav from '../components/AdminNav'
-import AiNav from '../components/AiNav'
 import ChatBubble from '../components/ChatBubble'
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -28,7 +27,7 @@ export default function App({ Component, pageProps }: AppProps) {
   }, [router])
 
   return (
-    <div className={`app-shell ${isAiArea ? 'ai-shell' : ''}`}>
+    <div className="app-shell">
       {isNavigating && <div className="route-progress" aria-label="Cargando página" />}
       <header className="topbar">
         <Link href="/" className="brand">
@@ -36,18 +35,16 @@ export default function App({ Component, pageProps }: AppProps) {
           <span>TELAR</span>
         </Link>
         <nav className="topnav" aria-label="Navegacion principal">
-          <Link className={router.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link'} href="/admin">Panel</Link>
-          <Link className={router.pathname.startsWith('/ai') ? 'nav-link active' : 'nav-link'} href="/ai/login">TELAR AI</Link>
+          <Link className={router.pathname.startsWith('/admin') || isAiArea ? 'nav-link active' : 'nav-link'} href="/admin">Panel</Link>
           <Link className={router.pathname.startsWith('/tag') ? 'nav-link active' : 'nav-link'} href="/tag/demo123">TAG demo</Link>
         </nav>
         <span className="demo-badge">Modo demo</span>
       </header>
       <main className={`main-content ${isNavigating ? 'is-navigating' : ''}`}>
-        {router.pathname.startsWith('/admin') && router.pathname !== '/admin/login' && <AdminNav />}
-        {router.pathname.startsWith('/ai') && router.pathname !== '/ai/login' && <AiNav />}
+        {(router.pathname.startsWith('/admin') || isAiArea) && router.pathname !== '/admin/login' && <AdminNav />}
         <Component {...pageProps} />
       </main>
-      {!router.pathname.startsWith('/admin') && !router.pathname.startsWith('/ai') && router.pathname !== '/chat' && <ChatBubble />}
+      {!router.pathname.startsWith('/admin') && !isAiArea && router.pathname !== '/chat' && <ChatBubble />}
     </div>
   )
 }

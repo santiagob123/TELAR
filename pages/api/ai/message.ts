@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { handleIncoming } from '../../../services/ai/conversation'
 import { requireAiUser } from '../../../lib/ai-auth'
 import { getAIContext } from '../../../services/ai/context'
+import { consumeRateLimitWithDevelopmentFallback, RATE_LIMITS, respondRateLimited } from '../../../lib/rate-limit'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end()
@@ -15,6 +16,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     typeof text !== 'string' || !text.trim()
   ) {
     return res.status(400).json({ error: 'Campos requeridos: from y text válidos.' })
+  }
+
+  try {
+    const minuteLimit = await consumeRateLimitWithDevelopmentFallback({
+      key: `ai:owner:${ownerId}:minute`,
+      limit: RATE_LIMITS.aiOwnerPerMin,
+      windowMs: 60_000
+    })
+    if (!minuteLimit.allowed) return respondRateLimited(res, minuteLimit.retryAfterSeconds)
+
+    const hourLimit = await consumeRateLimitWithDevelopmentFallback({
+      key: `ai:owner:${ownerId}:hour`,
+      limit: RATE_LIMITS.aiOwnerPerHour,
+      windowMs: 3_600_000
+    })
+    if (!hourLimit.allowed) return respondRateLimited(res, hourLimit.retryAfterSeconds)
+  } catch (error) {
+    console.error('AI message rate limit error:', error instanceof Error ? error.message : 'Error desconocido')
+    return res.status(503).json({ error: 'El servicio no está disponible temporalmente.' })
   }
 
   try {

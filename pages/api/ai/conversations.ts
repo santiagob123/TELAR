@@ -1,16 +1,29 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { ConversationDateFilterError, getFilteredConversations } from '../../../lib/ai-conversations'
-import { requireAiUser } from '../../../lib/ai-auth'
+import { ConversationDateFilterError, getFilteredConversationPage } from '../../../lib/ai-conversations'
+import { requireAiAccess } from '../../../lib/ai-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse){
-  const ownerId = await requireAiUser(req, res)
-  if (!ownerId) return
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const access = await requireAiAccess(req, res)
+  if (!access) return
+
+  const pageValue = typeof req.query.page === 'string' ? Number(req.query.page) : 1
+  const pageSizeValue = typeof req.query.pageSize === 'string' ? Number(req.query.pageSize) : 20
+  if (!Number.isSafeInteger(pageValue) || pageValue < 1 || !Number.isSafeInteger(pageSizeValue) || pageSizeValue < 1 || pageSizeValue > 50) {
+    return res.status(400).json({ error: 'Paginación inválida.' })
+  }
 
   try {
-    const conversations = await getFilteredConversations(
-      ownerId,
+    const conversations = await getFilteredConversationPage(
+      access.isGlobalAdmin ? undefined : access.ownerId,
       typeof req.query.from === 'string' ? req.query.from : undefined,
-      typeof req.query.to === 'string' ? req.query.to : undefined
+      typeof req.query.to === 'string' ? req.query.to : undefined,
+      pageValue,
+      pageSizeValue
     )
     return res.json(conversations)
   } catch (error) {

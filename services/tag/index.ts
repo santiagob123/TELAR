@@ -164,17 +164,30 @@ export async function getProfileByIdentifier(identifier: string) {
   return tag
 }
 
-export async function getProfilesByOwner(ownerId: string) {
-  return prisma.digitalProfile.findMany({
-    where: { business: { ownerId } },
-    include: { business: true, tags: true }
+export async function getBusinessesWithProfiles(ownerId?: string) {
+  const businesses = await prisma.business.findMany({
+    where: ownerId ? { ownerId } : {},
+    include: { owner: { select: { email: true } }, profile: { include: { tags: true } } },
+    orderBy: { createdAt: 'desc' }
   })
+
+  return businesses.map(({ profile, ...business }) => profile
+    ? { ...profile, business, tags: profile.tags, profileMissing: false }
+    : {
+        id: `business:${business.id}`,
+        title: business.name,
+        description: business.description,
+        imageUrl: null,
+        business,
+        tags: [],
+        profileMissing: true
+      })
 }
 
-export async function setTagStatusByIdentifier(identifier: string, status: string, ownerId: string) {
+export async function setTagStatusByIdentifier(identifier: string, status: string, ownerId?: string) {
   const normalizedStatus = normalizeStatus(status)
   const tag = await prisma.tag.findFirst({
-    where: { identifier, profile: { business: { ownerId } } },
+    where: { identifier, ...(ownerId ? { profile: { business: { ownerId } } } : {}) },
     select: { id: true }
   })
 
@@ -186,9 +199,9 @@ export async function setTagStatusByIdentifier(identifier: string, status: strin
   })
 }
 
-export async function getOwnedProfile(profileId: string, ownerId: string) {
+export async function getOwnedProfile(profileId: string, ownerId?: string) {
   return prisma.digitalProfile.findFirst({
-    where: { id: profileId, business: { ownerId } },
+    where: { id: profileId, ...(ownerId ? { business: { ownerId } } : {}) },
     include: { business: true }
   })
 }

@@ -16,6 +16,8 @@
 - Selección automática de KB relevante.
 - Exportación administrativa únicamente en JSON, agrupada por conversación.
 - Filtros de conversaciones por fecha interpretados como calendario `America/Bogota`.
+- El login individual comparte sesión por usuario; el contexto AI y las conversaciones privadas se filtran por propietario. `AI_TOKEN`/`AI_USER_ID` siguen como compatibilidad temporal.
+- El endpoint interno de mensajes resuelve el contexto en servidor y no confía en un `businessId` enviado por el cliente.
 
 ## Funcionalidad pendiente
 
@@ -29,6 +31,8 @@
 
 ## Hardening y QA
 
-- Ownership/autorización por recurso, rate limiting, observabilidad y tests automatizados.
+- Completar pruebas automatizadas de aislamiento entre propietarios.
+- Rate limiting, observabilidad y tests automatizados.
+- Asignar de forma controlada cualquier contexto o conversación histórica cuyo negocio no tenga propietario.
 
 Ver: [[TELAR AI - Arquitectura]] y [[Pendientes AI]].

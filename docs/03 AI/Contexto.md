@@ -10,4 +10,4 @@ Si no existe, crea el Business técnico y carga la KB oficial. Si faltan bloques
 
 ## Observación
 
-La migración de `ownerId` está aplicada en la base de desarrollo. El contexto AI actualmente no usa ownership para resolver el Business técnico; la aplicación de ownership a recursos sigue pendiente.
+El contexto AI privado resuelve el Business técnico usando el `User` de `AI_USER_ID`. Si encuentra un contexto técnico sin propietario, lo asigna al principal AI configurado; un contexto perteneciente a otro propietario se rechaza.

@@ -36,6 +36,9 @@ model Business {
   profile      DigitalProfile?
   knowledge    KnowledgeBase[]
   conversations Conversation[]
+  classifications EmailClassification[]
+
+  @@index([ownerId])
 }
 
 model DigitalProfile {
@@ -60,6 +63,7 @@ model KnowledgeBase {
   id         String   @id @default(cuid())
   title      String
   content    String
+  isEditable Boolean  @default(false)
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
 }
@@ -81,5 +85,47 @@ model Message {
   text           String
   isFromAI       Boolean  @default(false)
   createdAt      DateTime @default(now())
+  idempotencyKey String?  @unique
   conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model RateLimitBucket {
+  id        String   @id @default(cuid())
+  key       String
+  window    DateTime @db.Timestamptz(3)
+  count     Int      @default(0)
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@unique([key, window], name: "key_window")
+  @@index([expiresAt])
+}
+
+model EmailClassification {
+  id              String   @id @default(cuid())
+  businessId      String
+  externalId      String?
+  categoria       String
+  prioridad       String
+  resumen         String
+  requiereAccion  Boolean
+  accionSugerida  String
+  createdAt       DateTime @default(now())
+  business        Business @relation(fields: [businessId], references: [id])
+
+  @@unique([businessId, externalId])
+  @@index([businessId, createdAt])
+}
+
+model N8nIdempotency {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  payloadHash String
+  status      String   @default("pending")
+  response    Json?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
 }

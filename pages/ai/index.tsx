@@ -11,16 +11,26 @@ export default function AiDashboard() {
   const [convId, setConvId] = useState<string | null>(null)
   const [requiresHuman, setRequiresHuman] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [waitingLong, setWaitingLong] = useState(false)
   const [error, setError] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
   const sendingRef = useRef(false)
 
   useEffect(() => {
+    if (!isLoading) {
+      setWaitingLong(false)
+      return
+    }
+    const timer = window.setTimeout(() => setWaitingLong(true), 8_000)
+    return () => window.clearTimeout(timer)
+  }, [isLoading])
+
+  useEffect(() => {
     async function setup() {
       try {
-        const initResponse = await fetch('/api/ai/init')
+        const initResponse = await fetch('/api/ai/init', { method: 'POST' })
         if (initResponse.status === 401) {
-          await router.replace('/ai/login')
+          await router.replace('/admin/login')
           return
         }
         const initData = await initResponse.json()
@@ -40,7 +50,10 @@ export default function AiDashboard() {
   }, [messages])
 
   async function sendText(text: string) {
-    if (!businessId) return alert('No demo business found')
+    if (!businessId) {
+      setError('El contexto de TELAR AI todavía se está preparando. Inténtalo de nuevo en unos segundos.')
+      return
+    }
     if (sendingRef.current) return
     sendingRef.current = true
     setInput('')
@@ -56,16 +69,21 @@ export default function AiDashboard() {
         body: JSON.stringify({ businessId, from: '+demo', text })
       })
       if (res.status === 401) {
-        await router.replace('/ai/login')
+        await router.replace('/admin/login')
         return
       }
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || 'No se pudo procesar el mensaje.')
       const remainingDelay = Math.max(0, 500 - (Date.now() - startedAt))
       if (remainingDelay > 0) await new Promise(resolve => setTimeout(resolve, remainingDelay))
+      setConvId(data.conv?.id || null)
+      if (data.handedOff === true) {
+        setRequiresHuman(true)
+        setMessages(prev => [...prev, { from: 'system', text: 'Tu mensaje fue recibido. Espera a que te atienda una persona.' }])
+        return
+      }
       const aiText = data.aiReply || 'No response'
       setMessages(prev => [...prev, { from: 'agent', text: aiText, isFromAI: true }])
-      setConvId(data.conv?.id || null)
       const low = aiText.toLowerCase()
       if (low.includes('deriva') || low.includes('humano') || low.includes('derivado') || low.includes('atención humana')) {
         setRequiresHuman(true)
@@ -82,16 +100,25 @@ export default function AiDashboard() {
 
   async function markHuman() {
     if (!convId) return
-    const response = await fetch(`/api/ai/conversations/${convId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state: 'human' })
-    })
-    if (response.status === 401) {
-      await router.replace('/ai/login')
-      return
+    setError('')
+    try {
+      const response = await fetch(`/api/ai/conversations/${convId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: 'human' })
+      })
+      if (response.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data?.error || 'No se pudo derivar la conversación.')
+      }
+      setRequiresHuman(true)
+    } catch (handoffError: any) {
+      setError(handoffError.message || 'No se pudo derivar la conversación.')
     }
-    setRequiresHuman(true)
   }
 
   return (
@@ -121,23 +148,24 @@ export default function AiDashboard() {
           )}
           {messages.map((m, i) => (
             <div key={i} className={`my-2 max-w-[75%] ${m.isFromAI ? 'mr-auto' : 'ml-auto'}`}>
-              <div className={`${m.isFromAI ? 'bg-[#e9f2ef] text-[#17232b]' : 'bg-[#087f78] text-white'} rounded-2xl px-3 py-2 text-sm leading-6`}>{m.text}</div>
+              <div className={`${m.from === 'system' ? 'mx-auto bg-[#f1f8df] text-[#17232b]' : m.isFromAI ? 'bg-[#e9f2ef] text-[#17232b]' : 'bg-[#087f78] text-white'} rounded-2xl px-3 py-2 text-sm leading-6`}>{m.text}</div>
             </div>
           ))}
           {isLoading && (
             <div className="my-2 mr-auto max-w-[75%]">
-              <div className="flex w-fit items-center gap-1 rounded-2xl rounded-bl-md bg-[#e9f2ef] px-4 py-3" aria-label="La IA está escribiendo" aria-live="polite">
+              <div className="flex w-fit items-center gap-1 rounded-2xl rounded-bl-md bg-[#e9f2ef] px-4 py-3" aria-label={waitingLong ? 'La IA está tardando en responder' : 'La IA está escribiendo'} aria-live="polite">
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#087f78]" style={{ animationDelay: '0ms' }}></span>
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#087f78]" style={{ animationDelay: '150ms' }}></span>
                 <span className="h-2 w-2 animate-bounce rounded-full bg-[#087f78]" style={{ animationDelay: '300ms' }}></span>
               </div>
+              {waitingLong && <p role="status" className="muted mt-1 text-xs">El modelo está tardando; la respuesta puede tomar hasta 60 segundos.</p>}
             </div>
           )}
         </div>
 
         <div className="mt-2">
           <form onSubmit={e => { e.preventDefault(); if (input.trim()) sendText(input.trim()) }} className="flex gap-2">
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 rounded-lg border border-[#cbd9d6] p-3 outline-none focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8]" />
+            <input value={input} maxLength={2000} onChange={e => setInput(e.target.value)} placeholder="Escribe un mensaje..." className="flex-1 rounded-lg border border-[#cbd9d6] p-3 outline-none focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8]" />
             <button disabled={isLoading} className="rounded-lg bg-[#087f78] px-5 py-2 font-semibold text-white transition hover:bg-[#075c59] disabled:cursor-not-allowed disabled:opacity-60">Enviar</button>
           </form>
         </div>

@@ -1,8 +1,8 @@
 import { GetServerSideProps } from 'next'
 import Link from 'next/link'
-import prisma from '../../lib/prisma'
+import { getPublicTagByIdentifier, PublicTagResultDto } from '../../lib/public-tag'
 
-type Props = { tag: any }
+type Props = { tag: PublicTagResultDto | null }
 
 export default function TagPage({ tag }: Props) {
   if (!tag) return (
@@ -14,7 +14,7 @@ export default function TagPage({ tag }: Props) {
     </div>
   )
 
-  if (tag.status === 'inactive') {
+  if (tag.kind === 'inactive') {
     return (
       <div className="mx-auto max-w-xl">
         <div className="surface p-8 text-center">
@@ -57,10 +57,11 @@ export default function TagPage({ tag }: Props) {
   return (
     <div className="mx-auto max-w-3xl">
       <div className="surface overflow-hidden">
+        {profile?.imageUrl && <img src={profile.imageUrl} alt={`Imagen de ${profile.title || business?.name || 'negocio'}`} className="max-h-80 w-full object-cover" />}
         <div className="bg-[#087f78] px-7 py-8 text-white sm:px-10">
           <p className="text-xs font-bold uppercase tracking-[.14em] text-[#d8eea8]">Perfil Digital</p>
-          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{profile.title || business?.name}</h1>
-          <p className="mt-3 max-w-xl text-base leading-7 text-emerald-50">{profile.description || business?.description}</p>
+          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">{profile?.title || business?.name}</h1>
+          <p className="mt-3 max-w-xl text-base leading-7 text-emerald-50">{profile?.description || business?.description}</p>
         </div>
         
         <div className="grid gap-6 p-7 sm:grid-cols-2 sm:p-10">
@@ -136,26 +137,13 @@ export default function TagPage({ tag }: Props) {
       
       <p className="muted mt-5 text-center text-xs">Información compartida por el negocio. Siempre actualizada sin cambiar la etiqueta física.</p>
       
-      <div className="mt-8 p-4 bg-[#f5f8f6] border border-[#dfe7e5] rounded-lg text-center">
-        <p className="text-xs muted mb-3">Modo administración</p>
-        <div className="flex flex-wrap gap-2 justify-center">
-          <Link href="/admin/profile" className="text-sm font-semibold text-[#087f78] hover:underline">
-            ← Volver a editar
-          </Link>
-          <Link href="/tag/simulate" className="text-sm font-semibold text-[#087f78] hover:underline">
-            Simular otro TAG
-          </Link>
-        </div>
-      </div>
     </div>
   )
 }
 
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
   const { id } = ctx.query
-  const tag = await prisma.tag.findUnique({
-    where: { identifier: String(id) },
-    include: { profile: { include: { business: true } } }
-  })
+  const tag = await getPublicTagByIdentifier(String(id))
+  if (!tag) return { notFound: true }
   return { props: { tag: JSON.parse(JSON.stringify(tag)) } }
 }

@@ -12,7 +12,7 @@
 
 ### En prueba o no confirmado
 
-- Gmail real no está confirmado; no existe un endpoint Gmail revisado en esta estructura.
+- Gmail vía n8n está activo como canal externo one-way; clasifica y actúa sobre correos, pero no persiste las clasificaciones en TELAR ni está versionado en el repo.
 - Otros canales no están confirmados.
 
 Ver: [[WhatsApp]] y [[TELAR AI - Estado]].

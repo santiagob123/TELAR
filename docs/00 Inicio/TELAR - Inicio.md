@@ -1,57 +1,50 @@
 # TELAR
 
+> Mapa de navegación del proyecto y acceso rápido al estado de trabajo.
+
 ## Estado general
 
-🟢 Núcleo MVP implementado; pendientes funcionales principales: NFC físico y WhatsApp real.
+El proyecto reúne TELAR TAG (perfiles públicos y QR) y TELAR AI (asistente y conversaciones). El estado de funcionalidades, limitaciones y preparación para producción se mantiene en las notas enlazadas; confirmar siempre contra el código antes de tomar decisiones de implementación.
 
-TELAR es un MVP Next.js/TypeScript con dos áreas: [[MVP - TELAR TAG]] y [[MVP - TELAR AI]]. El código actual incluye páginas públicas, paneles protegidos por token, APIs Prisma y servicios de IA configurables.
+## Panel de trabajo
 
-⚠️ El schema y las migraciones activas usan PostgreSQL. La migración de `Business.ownerId` está aplicada en la base de desarrollo; el ownership todavía no se aplica a las APIs.
+- **Backlog priorizado:** [[PENDIENTES]]
+- **Auditoría funcional y evidencia:** [[AUDIT]]
+- **Bugs y retro:** [[Bugs]]
+- **Roadmap:** [[Roadmap TELAR]]
+- **Preparación para producción:** [[Antes de producción]]
 
-## MVP
+### En foco
 
-- [[MVP - TELAR TAG]]
-- [[MVP - TELAR AI]]
-- [[Estado actual del MVP]]
+- [ ] Recibir el detalle de los bugs de la retro (pasos para reproducir y resultado esperado).
+- [ ] Recibir las pantallas o componentes cuya presentación visual se debe mejorar.
+- [ ] Resolver el drift del índice `Business_ownerId_idx` antes de continuar con rate limiting.
+- [ ] Rotar el secreto de n8n expuesto en configuración externa.
 
-## TELAR TAG
+## Mapa del vault
 
-- [[TELAR TAG - Estado]]
-- [[TELAR TAG - Arquitectura]]
-- [[NFC]]
-- [[QR]]
-- [[Seguridad TAG]]
-- [[Pendientes TAG]]
+### Producto
 
-## TELAR AI
+- [[MVP - TELAR TAG]] · [[MVP - TELAR AI]] · [[Estado actual del MVP]]
 
-- [[TELAR AI - Estado]]
-- [[TELAR AI - Arquitectura]]
-- [[Knowledge Base]]
-- [[Contexto]]
-- [[Historial]]
-- [[Fast Path]]
-- [[Security Path]]
-- [[Providers]]
-- [[Canales]]
-- [[WhatsApp]]
-- [[Pendientes AI]]
+### TELAR TAG
 
-## Arquitectura
+- [[TELAR TAG - Estado]] · [[TELAR TAG - Arquitectura]]
+- [[QR]] · [[NFC]] · [[Seguridad TAG]] · [[Pendientes TAG]]
 
-- [[Arquitectura general]]
-- [[Base de datos]]
-- [[APIs]]
-- [[Autenticación]]
-- [[Seguridad]]
+### TELAR AI
 
-## Trabajo pendiente
+- [[TELAR AI - Estado]] · [[TELAR AI - Arquitectura]]
+- [[Knowledge Base]] · [[Contexto]] · [[Historial]]
+- [[Fast Path]] · [[Security Path]] · [[Providers]] · [[Canales]] · [[WhatsApp]]
+- [[Pendientes AI]] · [[Handoff humano]] · [[Integración Gmail vía n8n]]
 
-- [[Pendientes generales]]
-- [[Bugs]]
-- [[Seguridad]]
-- [[Antes de producción]]
+### Arquitectura y calidad
 
-## Roadmap
+- [[Arquitectura general]] · [[Base de datos]] · [[APIs]]
+- [[Autenticación]] · [[Seguridad]]
+- [[Checklist MVP]] · [[Pruebas AI]] · [[Pruebas de seguridad]] · [[Pruebas TAG]]
 
-- [[Roadmap TELAR]]
+### Decisiones y planificación
+
+- [[Decisiones técnicas]] · [[Roadmap TELAR]]

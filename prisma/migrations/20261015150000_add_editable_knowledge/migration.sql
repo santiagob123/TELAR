@@ -1,0 +1,2 @@
+ALTER TABLE "KnowledgeBase"
+ADD COLUMN "isEditable" BOOLEAN NOT NULL DEFAULT false;

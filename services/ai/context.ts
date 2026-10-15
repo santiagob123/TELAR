@@ -25,30 +25,19 @@ function getKnowledgeSyncState(knowledge: Array<{ title: string; content: string
   return { missing, stale }
 }
 
-export async function getAIContext(ownerId?: string) {
+export async function ensureAIContext(ownerId?: string) {
   // El contexto de TELAR AI no tiene DigitalProfile (eso es TELAR TAG).
   // Evita reutilizar un negocio TAG que coincida solo por el nombre.
   const existing = await prisma.business.findFirst({
     where: {
       name: AI_CONTEXT_NAME,
-      profile: { is: null }
+      profile: { is: null },
+      ownerId: ownerId || null
     },
     include: { knowledge: true }
   })
 
   if (existing) {
-    if (ownerId && existing.ownerId && existing.ownerId !== ownerId) {
-      throw new Error('El contexto de TELAR AI pertenece a otro propietario.')
-    }
-
-    if (ownerId && !existing.ownerId) {
-      await prisma.business.update({
-        where: { id: existing.id },
-        data: { ownerId }
-      })
-      existing.ownerId = ownerId
-    }
-
     const kbChars = existing.knowledge.reduce((sum, item) => sum + item.title.length + item.content.length, 0)
     const syncState = getKnowledgeSyncState(existing.knowledge)
 
@@ -95,4 +84,18 @@ export async function getAIContext(ownerId?: string) {
     synced: true
   })
   return { ...created, knowledge }
+}
+
+export async function getAIContext(ownerId?: string) {
+  const context = await prisma.business.findFirst({
+    where: {
+      name: AI_CONTEXT_NAME,
+      profile: { is: null },
+      ownerId: ownerId || null
+    },
+    include: { knowledge: true }
+  })
+
+  if (!context) throw new Error('El contexto de TELAR AI no está inicializado.')
+  return context
 }

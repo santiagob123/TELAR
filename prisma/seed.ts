@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import { getAIContext } from '../services/ai/context'
+import { ensureAIContext } from '../services/ai/context'
 import { ensureTelarAIKnowledge } from '../services/ai/knowledge'
 
 const prisma = new PrismaClient()
@@ -64,7 +64,7 @@ async function ensureDemoTagData() {
 async function main() {
   try {
     await ensureDemoTagData()
-    const aiContext = await getAIContext()
+    const aiContext = await ensureAIContext()
     const knowledge = await ensureTelarAIKnowledge(aiContext.id)
     console.log('✓ TELAR AI context:', aiContext.name, '(ID:', aiContext.id + ')')
     console.log('✓ TELAR AI Knowledge Base items:', knowledge.length)

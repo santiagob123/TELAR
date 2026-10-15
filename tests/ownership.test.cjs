@@ -35,6 +35,7 @@ const prisma = new Proxy({
   digitalProfile: createPrismaDelegate('digitalProfile'),
   tag: createPrismaDelegate('tag'),
   conversation: createPrismaDelegate('conversation'),
+  message: createPrismaDelegate('message'),
   $transaction: unmockedOperation('$transaction')
 }, {
   get(target, property) {
@@ -61,11 +62,15 @@ const createTag = require('../pages/api/tags/index.ts').default
 const patchTag = require('../pages/api/tags/[id].ts').default
 const aiConversations = require('../pages/api/ai/conversations.ts').default
 const patchConversation = require('../pages/api/ai/conversations/[id].ts').default
+const humanMessage = require('../pages/api/ai/conversations/[id]/messages.ts').default
 const exportConversations = require('../pages/api/ai/conversations/export-json.ts').default
 const aiMessage = require('../pages/api/ai/message.ts').default
 const aiInit = require('../pages/api/ai/init.ts').default
+const publicChat = require('../pages/api/chat/message.ts').default
+const n8nChat = require('../pages/api/integrations/n8n/chat.ts').default
 const aiContext = require('../services/ai/context')
 const aiConversation = require('../services/ai/conversation')
+const aiService = require('../services/ai/index.ts')
 const { TELAR_AI_KNOWLEDGE } = require('../services/ai/knowledge')
 
 const originalInfo = console.info
@@ -73,6 +78,7 @@ const originalError = console.error
 const databaseMethods = new Map()
 const contextOriginal = aiContext.getAIContext
 const incomingOriginal = aiConversation.handleIncoming
+const answerMessageOriginal = aiService.answerMessage
 
 let users
 let businesses
@@ -209,7 +215,12 @@ function installPrismaFakes() {
 
   remember(prisma.conversation, 'findFirst', async ({ where }) => {
     queries.push({ model: 'conversation.findFirst', where })
-    return conversations.find(conversation => conversation.id === where.id && matchesOwner(conversation.businessId, where.business.ownerId)) || null
+    if (where.id) {
+      return conversations.find(conversation => conversation.id === where.id && matchesOwner(conversation.businessId, where.business.ownerId)) || null
+    }
+    return conversations
+      .filter(conversation => conversation.businessId === where.businessId && conversation.from === where.from && conversation.state === where.state)
+      .sort((left, right) => right.createdAt - left.createdAt)[0] || null
   })
 
   remember(prisma.conversation, 'update', async args => {
@@ -217,6 +228,19 @@ function installPrismaFakes() {
     const conversation = conversations.find(item => item.id === args.where.id)
     if (conversation) Object.assign(conversation, args.data)
     return conversation
+  })
+
+  remember(prisma.message, 'create', async args => {
+    const message = {
+      id: `message-${writes.filter(write => write.model === 'message.create').length + 1}`,
+      conversationId: args.data.conversationId,
+      from: args.data.from,
+      text: args.data.text,
+      isFromAI: args.data.isFromAI,
+      createdAt: new Date('2026-09-30T00:00:00.000Z')
+    }
+    writes.push({ model: 'message.create', args })
+    return message
   })
 
   remember(prisma, '$transaction', async callback => callback({
@@ -258,6 +282,7 @@ function installPrismaFakes() {
 beforeEach(() => {
   aiContext.getAIContext = contextOriginal
   aiConversation.handleIncoming = incomingOriginal
+  aiService.answerMessage = answerMessageOriginal
   process.env.ADMIN_USER_ID = 'user-a'
   process.env.AI_USER_ID = 'user-a'
   resetFixtures()
@@ -270,6 +295,7 @@ after(() => {
   }
   aiContext.getAIContext = contextOriginal
   aiConversation.handleIncoming = incomingOriginal
+  aiService.answerMessage = answerMessageOriginal
   console.info = originalInfo
   console.error = originalError
   for (const [key, value] of Object.entries(originalEnv)) {
@@ -383,4 +409,158 @@ test('missing resources return controlled 404 responses', async () => {
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-a', { id: 'missing-profile' }, payload))).statusCode, 404)
   assert.equal((await call(patchTag, apiRequest('PATCH', 'user-a', { id: 'missing-tag' }, { status: 'inactive' }))).statusCode, 404)
   assert.equal((await call(patchConversation, apiRequest('PATCH', 'user-a', { id: 'missing-conversation' }, { state: 'human' }, 'ai'))).statusCode, 404)
+})
+
+test('AI handoff reuses the matching human conversation, persists the incoming message, and skips the AI', async () => {
+  const humanConversation = {
+    id: 'human-conversation',
+    businessId: 'ai-business-a',
+    from: 'public:session-a',
+    state: 'human',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    messages: []
+  }
+  conversations.push(humanConversation)
+  let answerCalls = 0
+  aiService.answerMessage = async () => {
+    answerCalls += 1
+    return 'No debe responder la IA'
+  }
+
+  const result = await aiConversation.handleIncoming('ai-business-a', 'public:session-a', '  Necesito ayuda  ')
+
+  assert.equal(result.conv.id, 'human-conversation')
+  assert.equal(result.aiReply, null)
+  assert.equal(result.handedOff, true)
+  assert.equal(answerCalls, 0)
+  assert.deepEqual(queries.find(query => query.model === 'conversation.findFirst' && query.where.state === 'human').where, {
+    businessId: 'ai-business-a',
+    from: 'public:session-a',
+    state: 'human'
+  })
+  assert.deepEqual(writes.find(write => write.model === 'message.create').args.data, {
+    conversationId: 'human-conversation',
+    from: 'public:session-a',
+    text: 'Necesito ayuda',
+    isFromAI: false
+  })
+})
+
+test('AI continues to answer an open conversation and returns handedOff false', async () => {
+  let answerCalls = 0
+  aiService.answerMessage = async () => {
+    answerCalls += 1
+    return 'Respuesta de IA'
+  }
+
+  const result = await aiConversation.handleIncoming('business-a', 'fixture-a', 'Consulta abierta')
+
+  assert.equal(result.conv.id, 'conversation-a')
+  assert.equal(result.handedOff, false)
+  assert.equal(result.aiReply, 'Respuesta de IA')
+  assert.equal(answerCalls, 1)
+})
+
+test('human message endpoint authenticates, validates ownership and state, and returns the persisted message', async () => {
+  const unauthorizedRequest = apiRequest('POST', null, { id: 'conversation-a' }, { text: 'Respuesta humana' }, 'ai')
+  unauthorizedRequest.headers = {}
+  assert.equal((await call(humanMessage, unauthorizedRequest)).statusCode, 401)
+
+  for (const body of [{ text: '' }, { text: 42 }, { text: 'x'.repeat(2001) }]) {
+    assert.equal((await call(humanMessage, apiRequest('POST', 'user-a', { id: 'conversation-a' }, body, 'ai'))).statusCode, 400)
+  }
+
+  assert.equal((await call(humanMessage, apiRequest('POST', 'user-a', { id: 'missing-conversation' }, { text: 'Respuesta' }, 'ai'))).statusCode, 404)
+  assert.equal((await call(humanMessage, apiRequest('POST', 'user-a', { id: 'conversation-b' }, { text: 'Respuesta' }, 'ai'))).statusCode, 404)
+  assert.equal((await call(humanMessage, apiRequest('POST', 'user-a', { id: 'conversation-a' }, { text: 'Respuesta' }, 'ai'))).statusCode, 409)
+
+  conversations.find(conversation => conversation.id === 'conversation-a').state = 'human'
+  const response = await call(humanMessage, apiRequest('POST', 'user-a', { id: 'conversation-a' }, { text: '  Respuesta del equipo  ' }, 'ai'))
+  assert.equal(response.statusCode, 200)
+  assert.deepEqual(Object.keys(response.body).sort(), ['conversationId', 'createdAt', 'from', 'id', 'isFromAI', 'text'].sort())
+  assert.equal(response.body.conversationId, 'conversation-a')
+  assert.equal(response.body.from, 'human')
+  assert.equal(response.body.text, 'Respuesta del equipo')
+  assert.equal(response.body.isFromAI, false)
+  assert.ok(response.body.createdAt instanceof Date)
+  assert.deepEqual(writes.find(write => write.model === 'message.create').args.data, {
+    conversationId: 'conversation-a',
+    from: 'human',
+    text: 'Respuesta del equipo',
+    isFromAI: false
+  })
+})
+
+test('public chat reports handoff without an AI reply', async () => {
+  const originalInfo = console.info
+  console.info = () => {}
+  conversations.push({
+    id: 'public-human-conversation',
+    businessId: 'ai-business-a',
+    from: 'public:session-public',
+    state: 'human',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    messages: []
+  })
+  aiContext.getAIContext = async () => ({ id: 'ai-business-a', name: 'TELAR AI' })
+  let answerCalls = 0
+  aiService.answerMessage = async () => {
+    answerCalls += 1
+    return 'No debe responder la IA'
+  }
+
+  try {
+    const response = await call(publicChat, apiRequest('POST', null, {}, { text: 'Necesito ayuda', sessionId: 'session-public' }))
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.body, { conversationId: 'public-human-conversation', aiReply: null, handedOff: true })
+    assert.equal(answerCalls, 0)
+    assert.deepEqual(writes.find(write => write.model === 'message.create').args.data, {
+      conversationId: 'public-human-conversation',
+      from: 'public:session-public',
+      text: 'Necesito ayuda',
+      isFromAI: false
+    })
+  } finally {
+    console.info = originalInfo
+  }
+})
+
+test('n8n chat reports handoff without an AI reply', async () => {
+  const originalSecret = process.env.N8N_WEBHOOK_SECRET
+  const originalInfo = console.info
+  process.env.N8N_WEBHOOK_SECRET = 'test-n8n-secret'
+  console.info = () => {}
+  conversations.push({
+    id: 'n8n-human-conversation',
+    businessId: 'ai-business-a',
+    from: 'n8n:session-n8n',
+    state: 'human',
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    messages: []
+  })
+  aiContext.getAIContext = async () => ({ id: 'ai-business-a', name: 'TELAR AI' })
+  let answerCalls = 0
+  aiService.answerMessage = async () => {
+    answerCalls += 1
+    return 'No debe responder la IA'
+  }
+
+  try {
+    const request = apiRequest('POST', null, {}, { text: 'Necesito ayuda', sessionId: 'session-n8n' })
+    request.headers = { 'x-n8n-secret': process.env.N8N_WEBHOOK_SECRET }
+    const response = await call(n8nChat, request)
+    assert.equal(response.statusCode, 200)
+    assert.deepEqual(response.body, { conversationId: 'n8n-human-conversation', aiReply: null, handedOff: true })
+    assert.equal(answerCalls, 0)
+    assert.deepEqual(writes.find(write => write.model === 'message.create').args.data, {
+      conversationId: 'n8n-human-conversation',
+      from: 'n8n:session-n8n',
+      text: 'Necesito ayuda',
+      isFromAI: false
+    })
+  } finally {
+    console.info = originalInfo
+    if (originalSecret === undefined) delete process.env.N8N_WEBHOOK_SECRET
+    else process.env.N8N_WEBHOOK_SECRET = originalSecret
+  }
 })

@@ -8,6 +8,7 @@
 - [x] Providers configurables y fallback.
 - [x] Exportación JSON de conversaciones con filtros por fecha en `America/Bogota`.
 - [x] Relación opcional `User -> Business` declarada en Prisma.
+- [x] Ownership aplicado a APIs privadas TAG y AI mediante principales configurados.
 
 ## Funcionalidad pendiente
 
@@ -21,8 +22,8 @@
 
 ## Hardening / producción / QA
 
-- [ ] Diseñar identidad individual y sesión.
-- [ ] Aplicar ownership y autorización por recurso a APIs TAG.
+- [ ] Sustituir los principales globales por identidad individual y sesiones multiusuario.
+- [ ] Asignar negocios históricos sin propietario con una operación controlada.
 - [ ] Rate limiting.
 - [ ] Observabilidad, health checks y alertas.
 - [ ] Gestión/rotación de secretos.
@@ -34,6 +35,6 @@
 
 ## Integraciones no confirmadas
 
-- [ ] Confirmar integración Gmail real.
+- [ ] Persistir en TELAR las clasificaciones del workflow Gmail vía n8n y versionarlo en el repo (canal activo, one-way).
 
 No se asignan fechas porque no están definidas en el proyecto.

@@ -15,10 +15,10 @@
 
 ### Parcial
 
-- Ownership: relación opcional `User -> Business` declarada, pero no aplicada a APIs ni confirmada en runtime.
+- Ownership: aplicado a las APIs privadas mediante principales configurados; no existe todavía login multiusuario.
 - Persistencia de conversaciones: `Conversation` y `Message` se guardan en backend y está validado.
 - El ChatBubble todavía no recupera visualmente el historial tras recargar; es una mejora UX, no un fallo de persistencia.
-- Seguridad administrativa: existe token global, no identidad multiusuario.
+- Seguridad administrativa: los tokens globales se vinculan a un `User`, pero no representan sesiones individuales.
 
 ### Funcionalidad pendiente
 
@@ -32,7 +32,7 @@
 
 ### Hardening, producción y QA
 
-- Ownership y autorización por recurso.
+- Asignación controlada de negocios históricos con `ownerId` nulo.
 - Tests automatizados, rate limiting, idempotencia n8n, observabilidad, backups y health checks.
 
 Ver: [[Pendientes generales]] y [[Roadmap TELAR]].

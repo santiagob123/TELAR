@@ -1,25 +1,26 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { getProfileByIdentifier, setTagStatusByIdentifier } from '../../../services/tag'
-import { requireAdminUser } from '../../../lib/admin-auth'
+import { requireAdminAccess } from '../../../lib/admin-auth'
+import { getPublicTagByIdentifier } from '../../../lib/public-tag'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query
 
   if (req.method === 'GET') {
-    const tag = await getProfileByIdentifier(String(id))
+    const tag = await getPublicTagByIdentifier(String(id))
     if (!tag) return res.status(404).json({ error: 'Not found' })
     if (tag.status === 'inactive') {
-      return res.json({ id: tag.id, identifier: tag.identifier, status: tag.status })
+      return res.json({ identifier: tag.identifier, status: tag.status })
     }
     return res.json(tag)
   }
 
   if (req.method === 'PATCH') {
-    const ownerId = await requireAdminUser(req, res)
-    if (!ownerId) return
+    const access = await requireAdminAccess(req, res)
+    if (!access) return
     const { status } = req.body
     try {
-      const updated = await setTagStatusByIdentifier(String(id), status, ownerId)
+      const updated = await setTagStatusByIdentifier(String(id), status, access.isGlobalAdmin ? undefined : access.ownerId)
       if (!updated) return res.status(404).json({ error: 'Not found' })
       return res.json(updated)
     } catch (error: any) {

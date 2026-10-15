@@ -20,7 +20,7 @@ export default function AIAdmin(){
     async function setup() {
       try {
         // First, try to initialize
-        const initResponse = await fetch('/api/ai/init')
+        const initResponse = await fetch('/api/ai/init', { method: 'POST' })
         const initData = await initResponse.json()
         if (initResponse.status === 401) {
           await router.replace('/admin/login')

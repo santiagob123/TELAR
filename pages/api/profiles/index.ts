@@ -1,13 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getProfilesByOwner } from '../../../services/tag'
-import { requireAdminUser } from '../../../lib/admin-auth'
+import { getBusinessesWithProfiles } from '../../../services/tag'
+import { requireAdminAccess } from '../../../lib/admin-auth'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
-    const ownerId = await requireAdminUser(req, res)
-    if (!ownerId) return
-    const profiles = await getProfilesByOwner(ownerId)
-    return res.json(profiles)
+    const access = await requireAdminAccess(req, res)
+    if (!access) return
+    const businesses = await getBusinessesWithProfiles(access.isGlobalAdmin ? undefined : access.ownerId)
+    return res.json(businesses)
   }
   res.status(405).end()
 }

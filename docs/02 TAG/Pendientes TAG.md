@@ -7,13 +7,14 @@
 ## Seguridad
 
 - [ ] Sustituir administración global por identidad individual.
-- [ ] Aplicar ownership a perfiles y TAGs.
-- [ ] Añadir rate limiting al login administrativo.
-- [ ] Revisar exposición pública de campos de negocio.
+- [x] Aplicar ownership a perfiles y TAGs.
+- [x] Añadir rate limiting al login administrativo (fallback local si el storage persistente falla).
+- [x] Limitar la respuesta pública del perfil a campos permitidos.
 
 ## UX
 
-- [ ] Completar edición de perfiles y gestión de imagen.
+- [x] Completar la edición de perfil, incluidos nombre del negocio e imagen mediante URL pública.
+- [ ] Añadir carga de archivo de imagen tras elegir proveedor de almacenamiento.
 - [ ] Verificar experiencia móvil de QR y páginas públicas.
 
 ## QA / Tests
@@ -24,6 +25,6 @@
 
 ## Hardening / producción
 
-- [ ] Aplicar ownership a perfiles y TAGs.
-- [ ] Sustituir administración global por identidad individual.
-- [ ] Añadir rate limiting y revisar exposición pública de campos.
+- [x] Aplicar ownership a perfiles y TAGs.
+- [ ] Retirar tokens globales de compatibilidad después de migrar las cuentas.
+- [x] Añadir rate limiting y revisar exposición pública de campos.

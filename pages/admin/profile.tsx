@@ -40,8 +40,10 @@ export default function ProfileAdmin(){
         method: 'PATCH', 
         headers: {'Content-Type':'application/json'}, 
         body: JSON.stringify({ 
+          businessName: selected.business?.name || '',
           title: selected.title, 
           description: selected.description,
+          imageUrl: selected.imageUrl || '',
           contactPhone: selected.business?.contactPhone || '', 
           whatsapp: selected.business?.whatsapp || '',
           email: selected.business?.email || '',
@@ -118,8 +120,8 @@ export default function ProfileAdmin(){
         
         {/* Lista de Perfiles */}
         <div className="surface p-5">
-          <h2 className="font-bold">Tus negocios</h2>
-          <p className="muted mt-1 text-sm">Selecciona uno para editar su información pública.</p>
+          <h2 className="font-bold">Negocios</h2>
+          <p className="muted mt-1 text-sm">Selecciona un negocio para editar su información pública.</p>
           {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
           {profiles.length === 0 ? (
             <div className="py-6 text-center">
@@ -130,12 +132,15 @@ export default function ProfileAdmin(){
             <ul>
               {profiles.map(p=> (
                 <li key={p.id} className="border-b border-[#dfe7e5] py-3 last:border-0">
-                  <button 
-                    className={`w-full text-left transition ${selected?.id === p.id ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
+                  <button
+                    disabled={p.profileMissing}
+                    className={`w-full text-left transition disabled:cursor-default ${selected?.id === p.id ? 'opacity-100' : 'opacity-70 hover:opacity-100'} ${p.profileMissing ? 'hover:opacity-70' : ''}`}
                     onClick={()=>setSelected(p)}
                   >
                     <span className="block font-semibold">{p.title}</span>
                     <span className="muted block text-sm">{p.business?.name}</span>
+                    {p.business?.owner?.email && <span className="muted block text-xs">Propietario: {p.business.owner.email}</span>}
+                    {p.profileMissing && <span className="muted mt-1 block text-xs">Sin perfil público todavía</span>}
                   </button>
                   {p.tags?.length ? (
                     <div className="mt-2 space-y-2">
@@ -175,9 +180,20 @@ export default function ProfileAdmin(){
               {/* Sección Información Pública */}
               <div className="pb-4 border-b border-[#dfe7e5]">
                 <h3 className="font-semibold mb-3 text-sm">Información que verá el cliente</h3>
+
+                <div className="mb-4">
+                  <label className="mb-1 block text-sm font-semibold">Nombre del negocio</label>
+                  <input
+                    className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition"
+                    value={selected.business?.name || ''}
+                    onChange={e=>setSelected({...selected, business: {...selected.business, name: e.target.value}})}
+                    required
+                  />
+                  <p className="muted text-xs mt-1">Nombre interno asociado a este negocio.</p>
+                </div>
                 
                 <div>
-                  <label className="mb-1 block text-sm font-semibold">Nombre del negocio (título)</label>
+                  <label className="mb-1 block text-sm font-semibold">Título del perfil público</label>
                   <input 
                     className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                     value={selected.title} 
@@ -194,6 +210,21 @@ export default function ProfileAdmin(){
                   value={selected.description} 
                   onChange={e=>setSelected({...selected, description: e.target.value})}
                 />
+              </div>
+
+              <div className="pb-4 border-b border-[#dfe7e5]">
+                <label className="mb-1 block text-sm font-semibold" htmlFor="profile-image-url">Imagen del perfil (URL)</label>
+                <input
+                  id="profile-image-url"
+                  type="url"
+                  maxLength={2048}
+                  placeholder="https://ejemplo.com/imagen.jpg"
+                  className="w-full rounded-lg border border-[#cbd9d6] p-3 outline-none transition focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8]"
+                  value={selected.imageUrl || ''}
+                  onChange={e => setSelected({ ...selected, imageUrl: e.target.value })}
+                />
+                <p className="muted mt-1 text-xs">Pega una imagen pública. El archivo debe estar alojado en un servicio accesible por URL.</p>
+                {selected.imageUrl && <img src={selected.imageUrl} alt="Vista previa del perfil" className="mt-3 max-h-48 max-w-full rounded-lg object-cover" />}
               </div>
 
               {/* Sección Contacto */}

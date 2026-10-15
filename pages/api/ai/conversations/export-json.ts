@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { ConversationDateFilterError, getFilteredConversations } from '../../../../lib/ai-conversations'
-import { requireAiUser } from '../../../../lib/ai-auth'
+import { requireAiAccess } from '../../../../lib/ai-auth'
 
 function getFilename(from?: string, to?: string) {
   if (from && to) return `telar-ai-conversations-${from}-to-${to}.json`
@@ -10,20 +10,26 @@ function getFilename(from?: string, to?: string) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const ownerId = await requireAiUser(req, res)
-  if (!ownerId) return
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET')
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  const access = await requireAiAccess(req, res)
+  if (!access) return
 
   const from = typeof req.query.from === 'string' ? req.query.from : undefined
   const to = typeof req.query.to === 'string' ? req.query.to : undefined
 
   try {
-    const conversations = await getFilteredConversations(ownerId, from, to)
+    const conversations = await getFilteredConversations(access.isGlobalAdmin ? undefined : access.ownerId, from, to)
     const payload = {
       exportedAt: new Date().toISOString(),
       filters: { from: from || null, to: to || null },
       conversationCount: conversations.length,
       conversations: conversations.map(conversation => ({
         conversationId: conversation.id,
+        business: conversation.business,
         createdAt: conversation.createdAt.toISOString(),
         lastActivityAt: conversation.lastActivityAt.toISOString(),
         messages: conversation.messages.map(message => ({

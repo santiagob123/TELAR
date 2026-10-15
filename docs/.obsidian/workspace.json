@@ -1,0 +1,226 @@
+{
+  "main": {
+    "id": "9766dc181e86acf8",
+    "type": "split",
+    "children": [
+      {
+        "id": "4e103e054af58c79",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8f09813d0d7abc9d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "PENDIENTES.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "PENDIENTES"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "2400cc39a566c5e9",
+    "type": "split",
+    "children": [
+      {
+        "id": "a39812fc1218b252",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6c1723e108a477f2",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorador de archivos"
+            }
+          },
+          {
+            "id": "b5e133729ca07c5a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": " ",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Buscar"
+            }
+          },
+          {
+            "id": "6dc63994274c04c0",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Marcadores"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "34540d8b56ef9e6d",
+    "type": "split",
+    "children": [
+      {
+        "id": "71b0eac9d6cf2a43",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "395123b3fc108569",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Enlaces entrantes"
+            }
+          },
+          {
+            "id": "99ee6ebb1720b540",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Enlaces salientes"
+            }
+          },
+          {
+            "id": "b8990136788ec4ce",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Etiquetas"
+            }
+          },
+          {
+            "id": "61f184b6f014108a",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Todas las propiedades"
+            }
+          },
+          {
+            "id": "45c30edb77e43b7a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Esquema"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Abrir selector rápido": false,
+      "graph:Abrir vista gráfica": false,
+      "canvas:Crear nuevo lienzo": false,
+      "daily-notes:Abrir la nota de hoy": false,
+      "templates:Insertar plantilla": false,
+      "command-palette:Abrir paleta de comandos": false,
+      "bases:Crear nueva base": false
+    }
+  },
+  "active": "8f09813d0d7abc9d",
+  "lastOpenFiles": [
+    "Sin título.canvas",
+    "00 Inicio/TELAR - Inicio.md",
+    "07 Pruebas/Checklist MVP.md",
+    "Bienvenido.md",
+    "2026-09-19.md",
+    "06 Pendientes/Seguridad.md",
+    "06 Pendientes/Pendientes generales.md",
+    "06 Pendientes/Bugs.md",
+    "06 Pendientes/Antes de producción.md",
+    "05 Decisiones/Decisiones técnicas.md",
+    "08 Roadmap/Roadmap TELAR.md",
+    "08 Roadmap",
+    "07 Pruebas/Pruebas de seguridad.md",
+    "07 Pruebas/Pruebas AI.md",
+    "07 Pruebas/Pruebas TAG.md",
+    "07 Pruebas",
+    "06 Pendientes",
+    "05 Decisiones",
+    "04 Arquitectura/Seguridad.md",
+    "04 Arquitectura/Autenticación.md",
+    "04 Arquitectura/APIs.md",
+    "04 Arquitectura/Base de datos.md",
+    "04 Arquitectura/Arquitectura general.md",
+    "04 Arquitectura",
+    "03 AI/Pendientes AI.md",
+    "03 AI/WhatsApp.md",
+    "03 AI/Canales.md",
+    "03 AI/Providers.md",
+    "03 AI/Security Path.md",
+    "03 AI/Fast Path.md",
+    "03 AI/Historial.md",
+    "03 AI",
+    "02 TAG",
+    "01 MVP",
+    "00 Inicio"
+  ]
+}

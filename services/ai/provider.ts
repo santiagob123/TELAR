@@ -10,6 +10,11 @@ const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash'
 const PROVIDER_TIMEOUT_MS = 60000
 
+function getProviderTimeoutMs() {
+  const configured = Number(process.env.OPENAI_TIMEOUT_MS)
+  return Number.isSafeInteger(configured) && configured > 0 ? configured : PROVIDER_TIMEOUT_MS
+}
+
 function getConfiguredProvider(): 'ollama' | 'openai' | 'gemini' | 'fallback' {
   const configured = (process.env.AI_PROVIDER || '').trim().toLowerCase()
   if (configured === 'ollama' || configured === 'openai' || configured === 'gemini' || configured === 'fallback') {
@@ -68,7 +73,7 @@ async function generateWithOpenAI(messages: AIProviderMessage[]): Promise<string
   const { hasKey, model, apiKey } = getOpenAiConfig()
   if (!hasKey) throw new Error('OPENAI_API_KEY no está configurada')
 
-  const client = new OpenAI({ apiKey })
+  const client = new OpenAI({ apiKey, timeout: getProviderTimeoutMs() })
   const response = await client.chat.completions.create({
     model,
     messages,

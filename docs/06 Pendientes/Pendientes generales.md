@@ -7,19 +7,21 @@
 
 ## UX / mejoras
 
-- [ ] Recuperar historial visual del ChatBubble tras recarga.
-- [ ] Mejorar feedback de provider lento.
-- [ ] Mejorar experiencia de escritura y mensajes largos.
-- [ ] Mejorar estados de carga, accesibilidad, responsividad y microinteracciones.
+- [x] Recuperar historial visual del ChatBubble tras recarga en la misma pestaña.
+- [x] Mejorar feedback de provider lento.
+- [x] Limitar y manejar mensajes largos.
+- [x] Mejorar estados de carga, accesibilidad básica y responsividad del chat.
 
 ## Hardening / producción
 
-- [ ] Aplicar ownership y autorización por recurso.
+- [x] Aplicar ownership y autorización por recurso en APIs privadas TAG y AI.
+- [ ] Provisionar usuarios y configurar los principales `ADMIN_USER_ID`/`AI_USER_ID`.
+- [x] Asignar los cuatro negocios históricos aprobados a la cuenta de demostración en Supabase.
 - [ ] Sustituir o limitar tokens globales.
-- [ ] Añadir rate limiting.
-- [ ] Añadir observabilidad y backups.
-- [ ] Añadir health checks y recuperación.
-- [ ] Añadir idempotencia para n8n.
+- [x] Añadir rate limiting; migraciones aplicadas en Supabase configurada, falta desplegar el código y verificar otros entornos.
+- [ ] Añadir observabilidad, alertas, backups y simulacro de recuperación.
+- [x] Añadir health check básico; falta monitoreo externo.
+- [x] Añadir soporte de idempotencia para n8n; falta enviar la clave desde el workflow.
 
 ## QA / Tests
 
@@ -29,4 +31,4 @@
 ## Documentación
 
 - [ ] Mantener este Vault sincronizado con cambios reales.
-- [ ] Confirmar qué integraciones de Gmail/n8n son pruebas o producción.
+- [ ] Persistir en TELAR las clasificaciones del workflow Gmail externo y versionarlo en el repo (canal activo, one-way).

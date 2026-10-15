@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma'
+import { randomUUID } from 'crypto'
 
 export const TELAR_AI_KNOWLEDGE = [
   {
@@ -39,29 +40,57 @@ export const TELAR_AI_KNOWLEDGE = [
 ] as const
 
 export async function ensureTelarAIKnowledge(businessId: string) {
-  const existingEntries = await prisma.knowledgeBase.findMany({
-    where: { businessId },
-    orderBy: { title: 'asc' }
-  })
-
+  const existingEntries = await prisma.$queryRaw<Array<{ id: string; title: string; content: string }>>`
+    SELECT "id", "title", "content" FROM "KnowledgeBase"
+    WHERE "businessId" = ${businessId} AND "isEditable" = false
+    ORDER BY "title" ASC, "id" ASC
+  `
   const existingByTitle = new Map(existingEntries.map(item => [item.title, item]))
 
   for (const entry of TELAR_AI_KNOWLEDGE) {
     const existing = existingByTitle.get(entry.title)
 
     if (!existing) {
-      await prisma.knowledgeBase.create({
-        data: { businessId, title: entry.title, content: entry.content }
-      })
+      await prisma.$executeRaw`
+        INSERT INTO "KnowledgeBase" ("id", "businessId", "title", "content", "isEditable")
+        VALUES (${randomUUID()}, ${businessId}, ${entry.title}, ${entry.content}, false)
+      `
       continue
     }
 
     if (existing.content !== entry.content) {
-      await prisma.knowledgeBase.update({
-        where: { id: existing.id },
-        data: { content: entry.content }
-      })
+      await prisma.$executeRaw`
+        UPDATE "KnowledgeBase" SET "content" = ${entry.content}
+        WHERE "id" = ${existing.id} AND "businessId" = ${businessId} AND "isEditable" = false
+      `
     }
+  }
+
+  const officialTitles: string[] = TELAR_AI_KNOWLEDGE.map(entry => entry.title)
+  for (const staleEntry of existingEntries) {
+    if (!officialTitles.includes(staleEntry.title)) {
+      await prisma.$executeRaw`
+        DELETE FROM "KnowledgeBase"
+        WHERE "id" = ${staleEntry.id} AND "businessId" = ${businessId} AND "isEditable" = false
+      `
+    }
+  }
+
+  for (const entry of TELAR_AI_KNOWLEDGE) {
+    await prisma.$executeRaw`
+      DELETE FROM "KnowledgeBase"
+      WHERE "businessId" = ${businessId}
+        AND "title" = ${entry.title}
+        AND "isEditable" = false
+        AND "id" NOT IN (
+          SELECT "id" FROM "KnowledgeBase"
+          WHERE "businessId" = ${businessId}
+            AND "title" = ${entry.title}
+            AND "isEditable" = false
+          ORDER BY "id" ASC
+          LIMIT 1
+        )
+    `
   }
 
   return prisma.knowledgeBase.findMany({

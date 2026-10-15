@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { hashPassword } from '../lib/user-session'
 
 const prisma = new PrismaClient()
 
@@ -15,9 +16,10 @@ function isValidEmail(email: string) {
 async function main() {
   const email = getOption('email').toLowerCase()
   const name = getOption('name')
+  const password = process.env.TELAR_USER_PASSWORD || ''
 
-  if (!email || !name) {
-    throw new Error('Uso: npm run provision:user -- --email=admin@example.com --name="Nombre"')
+  if (!email || !name || !password) {
+    throw new Error('Uso: TELAR_USER_PASSWORD="..." npm run provision:user -- --email=usuario@example.com --name="Nombre"')
   }
 
   if (!isValidEmail(email)) {
@@ -28,10 +30,14 @@ async function main() {
     throw new Error('El nombre no puede superar 200 caracteres.')
   }
 
-  const user = await prisma.user.upsert({
-    where: { email },
-    update: { name },
-    create: { email, name },
+  const hashedPassword = await hashPassword(password)
+  const existing = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+  if (existing) {
+    throw new Error('Ya existe una cuenta con ese correo; no se modificó su contraseña ni sus datos.')
+  }
+
+  const user = await prisma.user.create({
+    data: { email, name, password: hashedPassword },
     select: { id: true, email: true, name: true }
   })
 
@@ -39,7 +45,8 @@ async function main() {
 }
 
 main()
-  .catch(() => {
+  .catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : 'No se pudo crear la cuenta.')
     process.exitCode = 1
   })
   .finally(async () => {
