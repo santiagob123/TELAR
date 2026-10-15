@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { getProfileByIdentifier, setTagStatusByIdentifier } from '../../../services/tag'
+import { setTagStatusByIdentifier } from '../../../services/tag'
 import { requireAdminAccess } from '../../../lib/admin-auth'
 import { getPublicTagByIdentifier } from '../../../lib/public-tag'
 

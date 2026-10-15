@@ -31,7 +31,6 @@ export default function AiConversations() {
   const filters = new URLSearchParams()
   if (appliedFromDate) filters.set('from', appliedFromDate)
   if (appliedToDate) filters.set('to', appliedToDate)
-  const exportQuery = filters.toString()
   const query = new URLSearchParams(filters)
   query.set('page', String(page))
   query.set('pageSize', '20')

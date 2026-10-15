@@ -5,7 +5,11 @@ import { requireAiAccess } from '../../../../lib/ai-auth'
 function csvCell(value: unknown) {
   let text = value == null ? '' : String(value)
   // Prevent formula execution when a CSV is opened in spreadsheet software.
-  if (/^[\u0000-\u0020]*[=+@-]/.test(text)) text = `'${text}`
+  let firstVisibleCharacter = 0
+  while (firstVisibleCharacter < text.length && text.charCodeAt(firstVisibleCharacter) <= 0x20) {
+    firstVisibleCharacter += 1
+  }
+  if ('=+@-'.includes(text[firstVisibleCharacter] || '\0')) text = `'${text}`
   return `"${text.replace(/"/g, '""')}"`
 }
 
