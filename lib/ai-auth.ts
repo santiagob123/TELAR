@@ -29,7 +29,10 @@ export async function requireAiAccess(req: NextApiRequest, res: NextApiResponse)
     const session = verifyUserSession(req.cookies.telar_user_session)
     if (session) {
       const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true } })
-      if (user) return { ownerId: user.id, isGlobalAdmin: false }
+      if (user) {
+        const configuredAdminId = process.env.ADMIN_USER_ID?.trim()
+        return { ownerId: user.id, isGlobalAdmin: Boolean(configuredAdminId && user.id === configuredAdminId) }
+      }
     }
     const aiAuthorized = hasValidAiAuthorization(req)
     const adminAuthorized = hasValidAdminAuthorization(req)

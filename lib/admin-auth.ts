@@ -26,7 +26,10 @@ export async function requireAdminAccess(req: NextApiRequest, res: NextApiRespon
   const session = verifyUserSession(req.cookies.telar_user_session)
   if (session) {
     const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true } })
-    if (user) return { ownerId: user.id, isGlobalAdmin: false }
+    if (user) {
+      const configuredAdminId = process.env.ADMIN_USER_ID?.trim()
+      return { ownerId: user.id, isGlobalAdmin: Boolean(configuredAdminId && user.id === configuredAdminId) }
+    }
   }
   if (!hasAdminTokenAuthorization(req)) {
     res.status(401).json({ error: 'Unauthorized' })
