@@ -9,32 +9,42 @@ export default function ProfileAdmin(){
   const router = useRouter()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [selected, setSelected] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [loadingProfiles, setLoadingProfiles] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
+    let active = true
     async function loadProfiles() {
-      const response = await fetch('/api/profiles')
-      if (response.status === 401) {
-        await router.replace('/admin/login')
-        return
+      setLoadingProfiles(true)
+      setError('')
+      try {
+        const response = await fetch('/api/profiles')
+        if (response.status === 401) {
+          await router.replace('/admin/login')
+          return
+        }
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok || !Array.isArray(data)) throw new Error(data?.error || 'No se pudieron cargar los perfiles.')
+        if (active) setProfiles(data)
+      } catch (loadError) {
+        if (active) setError(loadError instanceof Error ? loadError.message : 'No se pudieron cargar los perfiles.')
+      } finally {
+        if (active) setLoadingProfiles(false)
       }
-      const data = await response.json()
-      if (!response.ok || !Array.isArray(data)) {
-        setError(data?.error || 'No se pudieron cargar los perfiles.')
-        return
-      }
-      setProfiles(data)
     }
-    loadProfiles().catch(() => setError('No se pudieron cargar los perfiles.'))
+    void loadProfiles()
+    return () => { active = false }
   }, [router])
 
   async function save(e:any){
     e.preventDefault()
     if (!selected) return
-    setLoading(true)
+    setSaving(true)
     setSaveSuccess(false)
+    setActionError('')
     try {
       const res = await fetch(`/api/profiles/${selected.id}`, { 
         method: 'PATCH', 
@@ -55,7 +65,7 @@ export default function ProfileAdmin(){
           linkedin: selected.business?.linkedin || ''
         }) 
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.status === 401) {
         await router.replace('/admin/login')
         return
@@ -66,14 +76,15 @@ export default function ProfileAdmin(){
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
     } catch (err:any) {
-      alert(err.message || 'Error al guardar los cambios')
+      setActionError(err.message || 'Error al guardar los cambios')
     } finally {
-      setLoading(false)
+      setSaving(false)
     }
   }
 
   async function toggleTagStatus() {
     if (!selected?.tags?.[0]) return
+    setActionError('')
     const tag = selected.tags[0]
     const nextStatus = tag.status === 'active' ? 'inactive' : 'active'
 
@@ -83,7 +94,7 @@ export default function ProfileAdmin(){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus })
       })
-      const data = await res.json()
+      const data = await res.json().catch(() => ({}))
       if (res.status === 401) {
         await router.replace('/admin/login')
         return
@@ -105,7 +116,7 @@ export default function ProfileAdmin(){
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 2500)
     } catch (err:any) {
-      alert(err.message || 'Error al cambiar el estado del TAG')
+      setActionError(err.message || 'Error al cambiar el estado del TAG')
     }
   }
 
@@ -122,8 +133,15 @@ export default function ProfileAdmin(){
         <div className="surface p-5">
           <h2 className="font-bold">Negocios</h2>
           <p className="muted mt-1 text-sm">Selecciona un negocio para editar su información pública.</p>
-          {error && <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-          {profiles.length === 0 ? (
+          {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+          {loadingProfiles ? (
+            <p role="status" className="muted py-8 text-center text-sm">Cargando negocios…</p>
+          ) : error && profiles.length === 0 ? (
+            <div className="py-6 text-center">
+              <p className="muted text-sm">No pudimos cargar la lista de negocios.</p>
+              <button type="button" onClick={() => window.location.reload()} className="mt-3 rounded-lg border border-[#cbd9d6] px-4 py-2 text-sm font-semibold text-[#087f78] transition hover:bg-[#e9f2ef]">Reintentar</button>
+            </div>
+          ) : profiles.length === 0 ? (
             <div className="py-6 text-center">
               <p className="muted text-sm mb-3">No hay negocios aún</p>
               <Link href="/admin/tags" className="text-sm font-semibold text-[#087f78]">Crear el primer negocio →</Link>
@@ -134,7 +152,8 @@ export default function ProfileAdmin(){
                 <li key={p.id} className="border-b border-[#dfe7e5] py-3 last:border-0">
                   <button
                     disabled={p.profileMissing}
-                    className={`w-full text-left transition disabled:cursor-default ${selected?.id === p.id ? 'opacity-100' : 'opacity-70 hover:opacity-100'} ${p.profileMissing ? 'hover:opacity-70' : ''}`}
+                    aria-pressed={selected?.id === p.id}
+                    className={`w-full rounded-xl border p-3 text-left transition disabled:cursor-default ${selected?.id === p.id ? 'border-[#087f78] bg-[#e9f2ef] opacity-100' : 'border-transparent opacity-80 hover:border-[#cbd9d6] hover:opacity-100'} ${p.profileMissing ? 'hover:opacity-70' : ''}`}
                     onClick={()=>setSelected(p)}
                   >
                     <span className="block font-semibold">{p.title}</span>
@@ -171,6 +190,7 @@ export default function ProfileAdmin(){
 
         {/* Editor de Perfil */}
         <div className="surface p-5 sm:p-7">
+          {actionError && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
           {selected ? (
             <form onSubmit={save} className="space-y-4">
               <div>
@@ -182,8 +202,9 @@ export default function ProfileAdmin(){
                 <h3 className="font-semibold mb-3 text-sm">Información que verá el cliente</h3>
 
                 <div className="mb-4">
-                  <label className="mb-1 block text-sm font-semibold">Nombre del negocio</label>
+                  <label htmlFor="profile-business-name" className="mb-1 block text-sm font-semibold">Nombre del negocio</label>
                   <input
+                    id="profile-business-name"
                     className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition"
                     value={selected.business?.name || ''}
                     onChange={e=>setSelected({...selected, business: {...selected.business, name: e.target.value}})}
@@ -193,8 +214,9 @@ export default function ProfileAdmin(){
                 </div>
                 
                 <div>
-                  <label className="mb-1 block text-sm font-semibold">Título del perfil público</label>
+                  <label htmlFor="profile-title" className="mb-1 block text-sm font-semibold">Título del perfil público</label>
                   <input 
+                    id="profile-title"
                     className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                     value={selected.title} 
                     onChange={e=>setSelected({...selected, title: e.target.value})} 
@@ -204,8 +226,9 @@ export default function ProfileAdmin(){
               </div>
 
               <div className="pb-4 border-b border-[#dfe7e5]">
-                <label className="mb-1 block text-sm font-semibold">Descripción</label>
+                <label htmlFor="profile-description" className="mb-1 block text-sm font-semibold">Descripción</label>
                 <textarea 
+                  id="profile-description"
                   className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition h-20" 
                   value={selected.description} 
                   onChange={e=>setSelected({...selected, description: e.target.value})}
@@ -233,32 +256,36 @@ export default function ProfileAdmin(){
                 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Teléfono</label>
+                    <label htmlFor="profile-phone" className="mb-1 block text-sm font-semibold">Teléfono</label>
                     <input 
+                      id="profile-phone"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.contactPhone || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, contactPhone: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">WhatsApp</label>
+                    <label htmlFor="profile-whatsapp" className="mb-1 block text-sm font-semibold">WhatsApp</label>
                     <input 
+                      id="profile-whatsapp"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.whatsapp || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, whatsapp: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Correo</label>
+                    <label htmlFor="profile-email" className="mb-1 block text-sm font-semibold">Correo</label>
                     <input 
+                      id="profile-email"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.email || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, email: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Sitio web</label>
+                    <label htmlFor="profile-website" className="mb-1 block text-sm font-semibold">Sitio web</label>
                     <input 
+                      id="profile-website"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.website || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, website: e.target.value}})} 
@@ -271,40 +298,45 @@ export default function ProfileAdmin(){
                 <h3 className="font-semibold mb-3 text-sm">Más información</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Dirección</label>
+                    <label htmlFor="profile-address" className="mb-1 block text-sm font-semibold">Dirección</label>
                     <input 
+                      id="profile-address"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.address || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, address: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Horarios</label>
+                    <label htmlFor="profile-hours" className="mb-1 block text-sm font-semibold">Horarios</label>
                     <input 
+                      id="profile-hours"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.openingHours || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, openingHours: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Instagram</label>
+                    <label htmlFor="profile-instagram" className="mb-1 block text-sm font-semibold">Instagram</label>
                     <input 
+                      id="profile-instagram"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.instagram || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, instagram: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">Facebook</label>
+                    <label htmlFor="profile-facebook" className="mb-1 block text-sm font-semibold">Facebook</label>
                     <input 
+                      id="profile-facebook"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.facebook || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, facebook: e.target.value}})} 
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-semibold">LinkedIn</label>
+                    <label htmlFor="profile-linkedin" className="mb-1 block text-sm font-semibold">LinkedIn</label>
                     <input 
+                      id="profile-linkedin"
                       className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition" 
                       value={selected.business?.linkedin || ''} 
                       onChange={e=>setSelected({...selected, business: {...selected.business, linkedin: e.target.value}})} 
@@ -324,7 +356,7 @@ export default function ProfileAdmin(){
 
               {/* Mensajes de feedback */}
               {saveSuccess && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
+                <div role="status" className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
                   ✓ Cambios guardados correctamente
                 </div>
               )}
@@ -332,10 +364,10 @@ export default function ProfileAdmin(){
               {/* Botones de acción */}
               <div className="flex flex-wrap items-center gap-3 pt-4 border-t border-[#dfe7e5]">
                 <button 
-                  disabled={loading}
+                  disabled={saving}
                   className="rounded-lg bg-[#087f78] px-5 py-3 font-semibold text-white transition hover:bg-[#075c59] disabled:opacity-50"
                 >
-                  {loading ? 'Guardando...' : 'Guardar cambios'}
+                  {saving ? 'Guardando...' : 'Guardar cambios'}
                 </button>
                 {selected.tags?.[0] && (
                   <>

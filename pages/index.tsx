@@ -1,27 +1,54 @@
 import Link from 'next/link'
+import TelarHomeAnimation from '../components/TelarHomeAnimation'
 
 export default function Home() {
   return (
-    <div>
-      <section className="max-w-3xl">
-        <p className="eyebrow mb-3">Plataforma de experiencias conectadas</p>
-        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Una forma mas clara de conectar tu negocio.</h1>
-        <p className="muted mt-5 max-w-2xl text-lg leading-8">Explora TELAR TAG y prueba el asistente público desde la burbuja de conversación.</p>
-      </section>
-      <div className="mt-10 grid gap-5 md:grid-cols-2">
-        <Link href="/admin" className="surface group block p-6 no-underline transition hover:-translate-y-1">
-          <p className="eyebrow">Gestion</p>
-          <h2 className="mt-3 text-2xl font-bold">Panel de control</h2>
-          <p className="muted mt-2 leading-6">Revisa perfiles, tags, conversaciones y el asistente.</p>
-          <span className="mt-7 inline-block font-semibold text-teal-700">Entrar al panel &rarr;</span>
-        </Link>
-        <Link href="/tag/demo123" className="surface group block border-0 bg-[#087f78] p-6 text-white no-underline transition hover:-translate-y-1">
-          <p className="text-xs font-bold uppercase tracking-[.12em] text-[#d8eea8]">Experiencia publica</p>
-          <h2 className="mt-3 text-2xl font-bold">Ver TAG demo</h2>
-          <p className="mt-2 leading-6 text-emerald-50">Mira la ficha que recibe una persona al escanear un TAG.</p>
-          <span className="mt-7 inline-block font-semibold text-[#d8eea8]">Abrir experiencia &rarr;</span>
-        </Link>
+    <div className="home-page">
+      <div className="home-floating-figures" aria-hidden="true">
+        <span className="home-float-shape home-float-orbit" />
+        <span className="home-float-shape home-float-dot home-float-dot-one" />
+        <span className="home-float-shape home-float-diamond" />
+        <span className="home-float-shape home-float-dot home-float-dot-two" />
+        <span className="home-float-shape home-float-square" />
+        <span className="home-float-shape home-float-orbit home-float-orbit-small" />
+        <span className="home-float-shape home-float-orbit home-float-orbit-mid" />
+        <span className="home-float-shape home-float-star" />
+        <span className="home-float-shape home-float-pill" />
+        <span className="home-float-shape home-float-dot home-float-dot-three" />
+        <span className="home-float-shape home-float-plus" />
+        <span className="home-float-shape home-float-square home-float-square-small" />
+        <span className="home-float-shape home-float-orbit home-float-orbit-large" />
+        <span className="home-float-shape home-float-orbit home-float-orbit-right" />
+        <span className="home-float-shape home-float-orbit home-float-ring-small" />
+        <span className="home-float-shape home-float-orbit home-float-orbit-tiny" />
+        <span className="home-float-shape home-float-star home-float-star-small" />
+        <span className="home-float-shape home-float-dot home-float-dot-four" />
+        <span className="home-float-shape home-float-dot home-float-dot-five" />
+        <span className="home-float-shape home-float-dot home-float-dot-six" />
+        <span className="home-float-shape home-float-diamond home-float-diamond-small" />
+        <span className="home-float-shape home-float-cross" />
+        <span className="home-float-shape home-float-dash" />
       </div>
+      <main className="home-public-layout" aria-label="Experiencia pública TELAR TAG">
+        <div className="home-copy-column">
+          <section className="home-public-copy" aria-labelledby="home-title">
+            <p className="home-kicker"><span className="home-kicker-dot" /> PERFIL DIGITAL <span className="home-kicker-divider" /> TELAR TAG</p>
+            <h1 id="home-title">Tu negocio,<br />a un toque de distancia.</h1>
+            <p className="home-intro">Comparte quién eres, dónde encontrarte y cómo ponerse en contacto con una experiencia digital sencilla.</p>
+          </section>
+          <div className="home-copy-footer">
+            <Link href="/tag/demo123" className="home-primary-action">
+              <span>Ver TAG demo</span>
+              <span className="home-action-arrow" aria-hidden="true">→</span>
+            </Link>
+            <span className="home-copy-hint">Explora un perfil público de TELAR TAG</span>
+          </div>
+        </div>
+
+        <div className="home-animation-stage">
+          <TelarHomeAnimation />
+        </div>
+      </main>
     </div>
   )
 }

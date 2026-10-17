@@ -51,24 +51,13 @@ function safeImageUrl(value: string | null): string | null {
   }
 }
 
-async function findTagState(identifier: string): Promise<TagState | null> {
-  return prisma.tag.findUnique({
-    where: { identifier },
-    select: { identifier: true, status: true }
-  })
-}
-
 function inactiveTag(tag: TagState): PublicTagInactiveDto {
   return { kind: 'inactive', identifier: tag.identifier, status: tag.status }
 }
 
 export async function getPublicTagByIdentifier(identifier: string): Promise<PublicTagResultDto | null> {
-  const tagState = await findTagState(identifier)
-  if (!tagState) return null
-  if (tagState.status === 'inactive') return inactiveTag(tagState)
-
-  const tag = await prisma.tag.findFirst({
-    where: { identifier, status: tagState.status },
+  const tag = await prisma.tag.findUnique({
+    where: { identifier },
     select: {
       identifier: true,
       status: true,
@@ -97,13 +86,12 @@ export async function getPublicTagByIdentifier(identifier: string): Promise<Publ
     }
   })
 
-  if (tag) return {
+  if (!tag) return null
+  if (tag.status === 'inactive') return inactiveTag(tag)
+
+  return {
     ...tag,
     kind: 'active',
     profile: tag.profile ? { ...tag.profile, imageUrl: safeImageUrl(tag.profile.imageUrl) } : null
   }
-
-  const latestState = await findTagState(identifier)
-  if (latestState?.status === 'inactive') return inactiveTag(latestState)
-  return null
 }

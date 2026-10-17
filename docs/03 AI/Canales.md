@@ -12,7 +12,7 @@
 
 ### En prueba o no confirmado
 
-- Gmail vía n8n está activo como canal externo one-way; clasifica y actúa sobre correos, pero no persiste las clasificaciones en TELAR ni está versionado en el repo.
+- Gmail vía n8n está activo como canal externo one-way. El backend de TELAR ya persiste clasificaciones; falta confirmar que el workflow envíe `externalId` y versionar una exportación saneada. No se guarda el cuerpo completo del correo.
 - Otros canales no están confirmados.
 
 Ver: [[WhatsApp]] y [[TELAR AI - Estado]].

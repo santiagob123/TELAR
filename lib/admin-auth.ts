@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { hasValidAdminSession } from './admin-session'
 import prisma from './prisma'
+import { secureCompare } from './secure-compare'
+import { requireSameOriginMutation } from './request-security'
 import { verifyUserSession } from './user-session'
 
 export function requireAdminToken(req: NextApiRequest, res: NextApiResponse) {
@@ -8,7 +10,7 @@ export function requireAdminToken(req: NextApiRequest, res: NextApiResponse) {
 
   if (hasValidAdminSession(req.cookies.telar_admin_session)) return true
 
-  if (configuredToken && req.headers['x-admin-token'] === configuredToken) return true
+  if (secureCompare(req.headers['x-admin-token'], configuredToken)) return true
 
   res.status(401).json({ error: 'Unauthorized' })
   return false
@@ -17,12 +19,13 @@ export function requireAdminToken(req: NextApiRequest, res: NextApiResponse) {
 function hasAdminTokenAuthorization(req: NextApiRequest) {
   const configuredToken = process.env.ADMIN_TOKEN
   if (hasValidAdminSession(req.cookies.telar_admin_session)) return true
-  return Boolean(configuredToken && req.headers['x-admin-token'] === configuredToken)
+  return secureCompare(req.headers['x-admin-token'], configuredToken)
 }
 
 export type AdminAccess = { ownerId: string; isGlobalAdmin: boolean }
 
 export async function requireAdminAccess(req: NextApiRequest, res: NextApiResponse): Promise<AdminAccess | null> {
+  if (!requireSameOriginMutation(req, res)) return null
   const session = verifyUserSession(req.cookies.telar_user_session)
   if (session) {
     const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { id: true } })

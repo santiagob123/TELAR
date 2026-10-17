@@ -17,9 +17,9 @@ TELAR TAG permite crear negocios con perfil digital y TAG, editar información p
 
 ## Limitaciones
 
-- La administración usa `ADMIN_TOKEN` global.
+- Existe login individual por propietario; el `ADMIN_TOKEN` global continúa temporalmente para compatibilidad administrativa.
 - Las APIs privadas aplican ownership mediante `ADMIN_USER_ID` y `Business.ownerId`.
-- Los negocios históricos con `ownerId` nulo requieren una asignación controlada.
+- Los cuatro negocios históricos aprobados fueron asignados en la instancia Supabase configurada; revisar otros entornos antes de habilitarlos.
 
 ## Funcionalidad pendiente
 

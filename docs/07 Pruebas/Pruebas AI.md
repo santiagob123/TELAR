@@ -2,17 +2,11 @@
 
 ## Confirmado en pruebas previas
 
-- [x] Preguntas normales sobre TELAR, TAG y AI.
-- [x] Preguntas sobre canales y WhatsApp pendiente.
-- [x] Preguntas de información no confirmada sin datos inventados.
-- [x] Continuidad conversacional.
-- [x] Conversación larga con historial máximo de seis mensajes.
-- [x] Fast-path para saludos y despedidas.
-- [x] Respuestas provider con normalización de variantes de marca.
+- Preguntas normales sobre TELAR/TAG/AI, información no confirmada, continuidad conversacional e historial limitado a seis mensajes.
+- Fast-path para saludos/despedidas y normalización de marca.
+- Pruebas de ownership/handoff con Prisma simulado en `tests/ownership.test.cjs`.
+- En Vercel Production, autenticación por token de compatibilidad y respuestas 200 de APIs de conversaciones y Knowledge Base.
 
-## Por ejecutar
+## Alcance no cubierto por esa evidencia
 
-- [ ] Suite automatizada repetible.
-- [ ] Provider lento, caído y respuesta vacía por cada provider.
-- [ ] Carga y concurrencia.
-- [ ] Recuperación del historial visual tras reload.
+Las pruebas anteriores no cubren una sesión de propietario ni E2E. La carga/concurrencia, providers lentos o caídos y pruebas con cuenta propietaria necesitan configuración de provider y un ambiente con credenciales/datos aislados. El historial visual tras recargar sí se restaura localmente en la misma pestaña mediante `sessionStorage`.

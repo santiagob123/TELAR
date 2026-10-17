@@ -22,7 +22,7 @@ export default function AiConversations() {
   const [page, setPage] = useState(1)
   const [loadingOlder, setLoadingOlder] = useState<Record<string, boolean>>({})
   const [exporting, setExporting] = useState(false)
-  const [exportFormat, setExportFormat] = useState<'json' | 'csv' | null>(null)
+  const [exportFormat, setExportFormat] = useState<'json' | 'csv' | 'pdf' | null>(null)
   const [exportError, setExportError] = useState('')
   const [humanDrafts, setHumanDrafts] = useState<Record<string, string>>({})
   const [humanErrors, setHumanErrors] = useState<Record<string, string>>({})
@@ -35,7 +35,7 @@ export default function AiConversations() {
   query.set('page', String(page))
   query.set('pageSize', '20')
   const queryString = query.toString()
-  const { data, error, mutate } = useSWR(`/api/ai/conversations${queryString ? `?${queryString}` : ''}`, fetcher)
+  const { data, error, mutate, isLoading } = useSWR(`/api/ai/conversations${queryString ? `?${queryString}` : ''}`, fetcher)
 
   useEffect(() => {
     if (error?.status === 401) router.replace('/admin/login')
@@ -55,9 +55,14 @@ export default function AiConversations() {
     setAppliedToDate('')
   }
 
-  async function exportConversations(format: 'json' | 'csv') {
+  async function exportConversations(format: 'json' | 'csv' | 'pdf') {
     const exportFilters = filters.toString()
     const exportQueryString = exportFilters ? `?${exportFilters}` : ''
+    const printWindow = format === 'pdf' ? window.open('', '_blank') : null
+    if (format === 'pdf' && !printWindow) {
+      setExportError('Permite las ventanas emergentes para preparar el PDF.')
+      return
+    }
     setExporting(true)
     setExportFormat(format)
     setExportError('')
@@ -66,6 +71,7 @@ export default function AiConversations() {
       const endpoint = format === 'csv' ? 'export-csv' : 'export-json'
       const response = await fetch(`/api/ai/conversations/${endpoint}${exportQueryString}`)
       if (response.status === 401) {
+        printWindow?.close()
         await router.replace('/admin/login')
         return
       }
@@ -74,14 +80,55 @@ export default function AiConversations() {
         throw new Error(data?.error || 'No se pudieron exportar las conversaciones.')
       }
 
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = response.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || `telar-ai-conversations.${format}`
-      link.click()
-      URL.revokeObjectURL(url)
+      if (format === 'pdf') {
+        const payload = await response.json()
+        const escapeHtml = (value: unknown) => String(value ?? '').replace(/[&<>"']/g, character => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character] as string))
+        const dateLabel = (value: string) => new Intl.DateTimeFormat('es-CO', {
+          dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Bogota'
+        }).format(new Date(value))
+        const conversations = Array.isArray(payload.conversations) ? payload.conversations : []
+        const rows = conversations.map((conversation: any) => `
+          <article class="conversation">
+            <header><div><h2>${escapeHtml(conversation.business?.name || 'TELAR AI')}</h2><p>Contacto: ${escapeHtml(conversation.from || 'No especificado')}</p></div>
+              <p>Última actividad: ${escapeHtml(dateLabel(conversation.lastActivityAt || conversation.createdAt))}</p></header>
+            <div class="messages">${(Array.isArray(conversation.messages) ? conversation.messages : []).map((message: any) => `
+              <section class="message"><strong>${message.role === 'assistant' ? 'Asistente' : 'Cliente'}</strong><time>${escapeHtml(dateLabel(message.createdAt))}</time><p>${escapeHtml(message.content).replace(/\n/g, '<br>')}</p></section>`).join('')}
+            </div>
+          </article>`).join('')
+        printWindow!.document.open()
+        printWindow!.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>TELAR AI · Conversaciones</title>
+          <style>
+            @page { size: auto; margin: 16mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; color: #17232b; font: 12px/1.5 Arial, sans-serif; }
+            h1 { margin: 0 0 4px; font-size: 24px; } h2 { margin: 0; font-size: 16px; }
+            .report-head { margin-bottom: 20px; border-bottom: 2px solid #24405e; padding-bottom: 12px; }
+            .report-head p, header p { margin: 4px 0 0; color: #526273; }
+            .conversation { break-inside: avoid; margin: 0 0 18px; border: 1px solid #cbd5df; border-radius: 8px; padding: 12px; }
+            .conversation header { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid #d9e0e7; padding-bottom: 8px; }
+            .messages { padding-top: 4px; } .message { break-inside: avoid; border-bottom: 1px solid #edf0f3; padding: 8px 0; }
+            .message:last-child { border: 0; } .message strong { color: #285b69; } .message time { float: right; color: #66788a; }
+            .message p { margin: 5px 0 0; white-space: normal; overflow-wrap: anywhere; }
+            .empty { color: #526273; }
+          </style></head><body><div class="report-head"><h1>TELAR AI · Conversaciones</h1>
+          <p>${conversations.length} conversaciones · Generado ${escapeHtml(dateLabel(payload.exportedAt || new Date().toISOString()))}</p>
+          <p>Zona horaria: America/Bogota${payload.filters?.from || payload.filters?.to ? ` · Filtro: ${escapeHtml(payload.filters.from || 'inicio')} a ${escapeHtml(payload.filters.to || 'hoy')}` : ''}</p></div>
+          ${rows || '<p class="empty">No hay conversaciones para los filtros seleccionados.</p>'}
+          <script>window.addEventListener('load', () => setTimeout(() => window.print(), 250));</script></body></html>`)
+        printWindow!.document.close()
+      } else {
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = response.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] || `telar-ai-conversations.${format}`
+        link.click()
+        URL.revokeObjectURL(url)
+      }
     } catch (error: any) {
+      printWindow?.close()
       setExportError(error.message || 'No se pudieron exportar las conversaciones.')
     } finally {
       setExporting(false)
@@ -204,7 +251,7 @@ export default function AiConversations() {
         <p className="muted mt-2">Revisa las interacciones y decide cuándo necesita intervenir tu equipo.</p>
       </div>
       {error && error.status !== 401 && (
-        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error.message}</p>
+        <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error.message}</p>
       )}
       <div className="surface mb-5 flex flex-wrap items-end gap-3 p-4">
         <div>
@@ -219,9 +266,12 @@ export default function AiConversations() {
         <button type="button" onClick={clearFilters} className="rounded-lg border border-[#cbd9d6] px-4 py-2 text-sm font-semibold text-[#075c59]">Limpiar</button>
         <button type="button" onClick={() => void exportConversations('json')} disabled={exporting} className="rounded-lg border border-[#087f78] px-4 py-2 text-sm font-semibold text-[#075c59] disabled:opacity-50">{exporting && exportFormat === 'json' ? 'Generando...' : 'Descargar JSON'}</button>
         <button type="button" onClick={() => void exportConversations('csv')} disabled={exporting} className="rounded-lg border border-[#087f78] px-4 py-2 text-sm font-semibold text-[#075c59] disabled:opacity-50">{exporting && exportFormat === 'csv' ? 'Generando...' : 'Descargar CSV'}</button>
+        <button type="button" onClick={() => void exportConversations('pdf')} disabled={exporting} className="rounded-lg border border-[#087f78] px-4 py-2 text-sm font-semibold text-[#075c59] disabled:opacity-50">{exporting && exportFormat === 'pdf' ? 'Preparando PDF...' : 'Imprimir / Guardar PDF'}</button>
       </div>
-      {exportError && <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{exportError}</p>}
+      {exportError && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{exportError}</p>}
       <div className="space-y-4">
+        {isLoading && <div role="status" className="surface p-6 text-center text-sm muted">Cargando conversaciones…</div>}
+        {!isLoading && !error && data?.items?.length === 0 && <div className="surface p-6 text-center"><p className="font-semibold">No hay conversaciones para mostrar</p><p className="muted mt-2 text-sm">Cuando haya actividad, aparecerá aquí.</p></div>}
         {data?.items?.map((c: any) => (
           <div key={c.id} className="surface p-5">
             <div className="flex flex-wrap justify-between gap-4">
@@ -251,7 +301,7 @@ export default function AiConversations() {
                 <div key={m.id} className="border-t border-[#dfe7e5] py-2 text-sm"><span className="font-semibold">{m.from === 'human' ? 'Equipo' : m.from === 'agent' ? 'Asistente' : 'Cliente'}:</span> {m.text}</div>
               ))}
             </div>
-            {humanErrors[c.id] && <p className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{humanErrors[c.id]}</p>}
+            {humanErrors[c.id] && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{humanErrors[c.id]}</p>}
             {c.state === 'human' && (
               <form onSubmit={event => { event.preventDefault(); void sendHumanMessage(c.id) }} className="mt-4 flex gap-2 border-t border-[#dfe7e5] pt-4">
                 <input

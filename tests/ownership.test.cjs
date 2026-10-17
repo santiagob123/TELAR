@@ -6,7 +6,7 @@ require('ts-node').register({
   compilerOptions: { module: 'CommonJS', moduleResolution: 'node' }
 })
 
-const envKeys = ['ADMIN_TOKEN', 'AI_TOKEN', 'ADMIN_USER_ID', 'AI_USER_ID']
+const envKeys = ['ADMIN_TOKEN', 'AI_TOKEN', 'ADMIN_USER_ID', 'AI_USER_ID', 'SESSION_SECRET']
 const originalEnv = Object.fromEntries(envKeys.map(key => [key, process.env[key]]))
 const prismaModulePath = require.resolve('../lib/prisma')
 const originalPrismaModule = require.cache[prismaModulePath]
@@ -36,6 +36,7 @@ const prisma = new Proxy({
   tag: createPrismaDelegate('tag'),
   conversation: createPrismaDelegate('conversation'),
   message: createPrismaDelegate('message'),
+  rateLimitBucket: createPrismaDelegate('rateLimitBucket'),
   $transaction: unmockedOperation('$transaction')
 }, {
   get(target, property) {
@@ -53,8 +54,9 @@ require.cache[prismaModulePath] = {
 
 process.env.ADMIN_TOKEN = 'test-admin-token'
 process.env.AI_TOKEN = 'test-ai-token'
-process.env.ADMIN_USER_ID = 'user-a'
+process.env.ADMIN_USER_ID = 'admin-user'
 process.env.AI_USER_ID = 'user-a'
+process.env.SESSION_SECRET = 'ownership-test-session-secret-32-bytes-minimum'
 
 const adminProfiles = require('../pages/api/profiles/index.ts').default
 const patchProfile = require('../pages/api/profiles/[id].ts').default
@@ -72,11 +74,13 @@ const aiContext = require('../services/ai/context')
 const aiConversation = require('../services/ai/conversation')
 const aiService = require('../services/ai/index.ts')
 const { TELAR_AI_KNOWLEDGE } = require('../services/ai/knowledge')
+const { createUserSession } = require('../lib/user-session')
 
 const originalInfo = console.info
 const originalError = console.error
 const databaseMethods = new Map()
 const contextOriginal = aiContext.getAIContext
+const publicContextOriginal = aiContext.getPublicAIContext
 const incomingOriginal = aiConversation.handleIncoming
 const answerMessageOriginal = aiService.answerMessage
 
@@ -119,10 +123,11 @@ function apiRequest(method, principal, query = {}, body = {}, tokenType = 'admin
     method,
     query,
     body,
-    cookies: {},
+    cookies: principal ? { telar_user_session: createUserSession(principal) } : {},
     headers: tokenType === 'admin'
-      ? { 'x-admin-token': process.env.ADMIN_TOKEN }
-      : { 'x-ai-token': process.env.AI_TOKEN },
+      ? { 'x-admin-token': process.env.ADMIN_TOKEN, origin: 'http://localhost:3000', host: 'localhost:3000' }
+      : { 'x-ai-token': process.env.AI_TOKEN, origin: 'http://localhost:3000', host: 'localhost:3000' },
+    socket: { remoteAddress: '127.0.0.1' },
     principal
   }
 }
@@ -134,7 +139,7 @@ async function call(handler, req) {
 }
 
 function resetFixtures() {
-  users = [{ id: 'user-a' }, { id: 'user-b' }]
+  users = [{ id: 'admin-user' }, { id: 'user-a' }, { id: 'user-b' }]
   businesses = [
     { id: 'business-a', name: 'Business A', ownerId: 'user-a', profileId: 'profile-a' },
     { id: 'business-b', name: 'Business B', ownerId: 'user-b', profileId: 'profile-b' },
@@ -162,9 +167,22 @@ function resetFixtures() {
 function installPrismaFakes() {
   remember(prisma.user, 'findUnique', async ({ where }) => users.find(user => user.id === where.id) || null)
 
+  remember(prisma.business, 'findMany', async ({ where }) => businesses
+    .filter(business => !where?.ownerId || business.ownerId === where.ownerId)
+    .map(business => {
+      const profile = profiles.find(item => item.businessId === business.id)
+      return {
+        ...business,
+        profile: profile ? {
+          ...profile,
+          tags: tags.filter(tag => tag.profileId === profile.id)
+        } : null
+      }
+    }))
+
   remember(prisma.business, 'findFirst', async args => {
     queries.push({ model: 'business.findFirst', args })
-    return businesses.find(business => business.name === args.where.name && business.profileId === null) || null
+    return businesses.find(business => business.name === args.where.name && business.profileId === null && business.ownerId === args.where.ownerId) || null
   })
 
   remember(prisma.business, 'update', async args => {
@@ -210,7 +228,11 @@ function installPrismaFakes() {
 
   remember(prisma.conversation, 'findMany', async ({ where }) => {
     queries.push({ model: 'conversation.findMany', where })
-    return conversations.filter(conversation => matchesOwner(conversation.businessId, where.business.ownerId))
+    return conversations.filter(conversation => {
+      const ownerId = where.business?.ownerId
+      const ids = where.id?.in
+      return (!ownerId || matchesOwner(conversation.businessId, ownerId)) && (!ids || ids.includes(conversation.id))
+    })
   })
 
   remember(prisma.conversation, 'findFirst', async ({ where }) => {
@@ -242,6 +264,20 @@ function installPrismaFakes() {
     writes.push({ model: 'message.create', args })
     return message
   })
+
+  remember(prisma, '$queryRaw', async strings => {
+    const query = Array.isArray(strings) ? strings.join(' ') : ''
+    if (query.includes('WITH activity')) {
+      return conversations.map(conversation => ({
+        id: conversation.id,
+        lastActivityAt: conversation.messages.at(-1)?.createdAt || conversation.createdAt,
+        messageCount: conversation.messages.length
+      }))
+    }
+    return [{ count: 1 }]
+  })
+  remember(prisma, '$executeRaw', async () => 1)
+  remember(prisma.rateLimitBucket, 'deleteMany', async () => ({ count: 0 }))
 
   remember(prisma, '$transaction', async callback => callback({
     business: {
@@ -281,10 +317,12 @@ function installPrismaFakes() {
 
 beforeEach(() => {
   aiContext.getAIContext = contextOriginal
+  aiContext.getPublicAIContext = publicContextOriginal
   aiConversation.handleIncoming = incomingOriginal
   aiService.answerMessage = answerMessageOriginal
-  process.env.ADMIN_USER_ID = 'user-a'
+  process.env.ADMIN_USER_ID = 'admin-user'
   process.env.AI_USER_ID = 'user-a'
+  process.env.SESSION_SECRET = 'ownership-test-session-secret-32-bytes-minimum'
   resetFixtures()
   installPrismaFakes()
 })
@@ -294,6 +332,7 @@ after(() => {
     for (const [key, original] of methods) target[key] = original
   }
   aiContext.getAIContext = contextOriginal
+  aiContext.getPublicAIContext = publicContextOriginal
   aiConversation.handleIncoming = incomingOriginal
   aiService.answerMessage = answerMessageOriginal
   console.info = originalInfo
@@ -308,34 +347,29 @@ after(() => {
 
 test('TAG profile reads are scoped independently to users A and B', async () => {
   for (const [owner, expectedProfile] of [['user-a', 'profile-a'], ['user-b', 'profile-b']]) {
-    process.env.ADMIN_USER_ID = owner
     const res = await call(adminProfiles, apiRequest('GET', owner))
     assert.equal(res.statusCode, 200)
-    assert.deepEqual(res.body.map(profile => profile.id), [expectedProfile])
+    assert.deepEqual(res.body.filter(profile => !profile.profileMissing).map(profile => profile.id), [expectedProfile])
+    assert.ok(res.body.every(profile => profile.business.ownerId === owner))
   }
 })
 
 test('TAG profile patch permits owner and denies cross-owner access in both directions', async () => {
-  const payload = { title: 'Actualizado', description: 'Descripcion valida', contactPhone: '+34123456789', whatsapp: '+34123456789' }
-  process.env.ADMIN_USER_ID = 'user-a'
+  const payload = { businessName: 'Negocio actualizado', title: 'Actualizado', description: 'Descripcion valida', contactPhone: '+34123456789', whatsapp: '+34123456789' }
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-a', { id: 'profile-a' }, payload))).statusCode, 200)
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-a', { id: 'profile-b' }, payload))).statusCode, 404)
-  process.env.ADMIN_USER_ID = 'user-b'
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-b', { id: 'profile-a' }, payload))).statusCode, 404)
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-b', { id: 'profile-b' }, payload))).statusCode, 200)
 })
 
 test('TAG status patch permits owner and denies cross-owner access in both directions', async () => {
-  process.env.ADMIN_USER_ID = 'user-a'
   assert.equal((await call(patchTag, apiRequest('PATCH', 'user-a', { id: 'tag-a' }, { status: 'inactive' }))).statusCode, 200)
   assert.equal((await call(patchTag, apiRequest('PATCH', 'user-a', { id: 'tag-b' }, { status: 'inactive' }))).statusCode, 404)
-  process.env.ADMIN_USER_ID = 'user-b'
   assert.equal((await call(patchTag, apiRequest('PATCH', 'user-b', { id: 'tag-a' }, { status: 'inactive' }))).statusCode, 404)
   assert.equal((await call(patchTag, apiRequest('PATCH', 'user-b', { id: 'tag-b' }, { status: 'inactive' }))).statusCode, 200)
 })
 
 test('TAG creation always takes ownerId from the authenticated server principal', async () => {
-  process.env.ADMIN_USER_ID = 'user-b'
   const res = await call(createTag, apiRequest('POST', 'user-b', {}, {
     name: 'Nuevo negocio', description: 'Descripcion', contactPhone: '+34123456789', whatsapp: '+34123456789',
     identifier: 'new-tag', status: 'active', ownerId: 'user-a'
@@ -349,7 +383,7 @@ test('AI conversation list and export are scoped to each owner', async () => {
     process.env.AI_USER_ID = owner
     const list = await call(aiConversations, apiRequest('GET', owner, {}, {}, 'ai'))
     assert.equal(list.statusCode, 200)
-    assert.deepEqual(list.body.map(conversation => conversation.id), [expectedConversation])
+    assert.deepEqual(list.body.items.map(conversation => conversation.id), [expectedConversation])
     const exported = await call(exportConversations, apiRequest('GET', owner, {}, {}, 'ai'))
     assert.equal(exported.statusCode, 200)
     assert.deepEqual(JSON.parse(exported.body).conversations.map(conversation => conversation.conversationId), [expectedConversation])
@@ -388,14 +422,15 @@ test('AI init resolves the already-owned technical context without reassigning i
   const originalInfo = console.info
   console.info = () => {}
   try {
-    const res = await call(aiInit, apiRequest('GET', 'user-a', {}, {}, 'ai'))
+    const res = await call(aiInit, apiRequest('POST', 'user-a', {}, {}, 'ai'))
     assert.equal(res.statusCode, 200)
     assert.equal(res.body.success, true)
     assert.equal(businesses.find(business => business.id === 'ai-business-a').ownerId, 'user-a')
     assert.equal(writes.length, 0)
     assert.deepEqual(queries.find(query => query.model === 'business.findFirst').args.where, {
       name: 'TELAR AI',
-      profile: { is: null }
+      profile: { is: null },
+      ownerId: 'user-a'
     })
   } finally {
     console.info = originalInfo
@@ -403,7 +438,6 @@ test('AI init resolves the already-owned technical context without reassigning i
 })
 
 test('missing resources return controlled 404 responses', async () => {
-  process.env.ADMIN_USER_ID = 'user-a'
   process.env.AI_USER_ID = 'user-a'
   const payload = { title: 'Missing', description: 'Descripcion valida', contactPhone: '+34123456789', whatsapp: '+34123456789' }
   assert.equal((await call(patchProfile, apiRequest('PATCH', 'user-a', { id: 'missing-profile' }, payload))).statusCode, 404)
@@ -464,6 +498,7 @@ test('AI continues to answer an open conversation and returns handedOff false', 
 test('human message endpoint authenticates, validates ownership and state, and returns the persisted message', async () => {
   const unauthorizedRequest = apiRequest('POST', null, { id: 'conversation-a' }, { text: 'Respuesta humana' }, 'ai')
   unauthorizedRequest.headers = {}
+  unauthorizedRequest.cookies = {}
   assert.equal((await call(humanMessage, unauthorizedRequest)).statusCode, 401)
 
   for (const body of [{ text: '' }, { text: 42 }, { text: 'x'.repeat(2001) }]) {
@@ -502,7 +537,7 @@ test('public chat reports handoff without an AI reply', async () => {
     createdAt: new Date('2026-02-01T00:00:00Z'),
     messages: []
   })
-  aiContext.getAIContext = async () => ({ id: 'ai-business-a', name: 'TELAR AI' })
+  process.env.ADMIN_USER_ID = 'user-a'
   let answerCalls = 0
   aiService.answerMessage = async () => {
     answerCalls += 1
@@ -538,7 +573,7 @@ test('n8n chat reports handoff without an AI reply', async () => {
     createdAt: new Date('2026-02-01T00:00:00Z'),
     messages: []
   })
-  aiContext.getAIContext = async () => ({ id: 'ai-business-a', name: 'TELAR AI' })
+  process.env.ADMIN_USER_ID = 'user-a'
   let answerCalls = 0
   aiService.answerMessage = async () => {
     answerCalls += 1

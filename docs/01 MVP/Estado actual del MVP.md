@@ -1,38 +1,34 @@
 # Estado actual del MVP
 
+> Actualizado: 2026-10-15. Contrastar estado de base de datos con cada ambiente antes de operar migraciones.
+
 ## Resumen
 
-🟢 Núcleo TAG + AI implementado; pendientes funcionales: NFC físico y WhatsApp real.
+🟢 Núcleo TAG + AI implementado y desplegado. Permanecen dependencias externas (WhatsApp/NFC), validación E2E/operativa y trabajo de producción.
 
 ### Confirmado
 
-- Aplicación Next.js con Pages Router.
-- Prisma configurado en el schema para PostgreSQL y migración de `Business.ownerId` aplicada en la base de desarrollo.
-- TAG público y panel administrativo protegido por token.
-- AI público e interno con provider configurable.
-- QR generado en frontend.
-- Seed para datos demo y Knowledge Base.
+- Aplicación Next.js Pages Router con Prisma configurado para PostgreSQL.
+- TAG público, perfil digital, QR, estados active/inactive y panel de propietario.
+- Login individual por correo/contraseña, sesión segura y ownership implementados en `main` y desplegados en Vercel Production.
+- El token de compatibilidad sigue habilitado como acceso global temporal y está vinculado a `ADMIN_USER_ID`.
+- AI pública e interna con Knowledge Base, historial persistido, providers configurables, fallback, límites y paginación.
+- Exportación de conversaciones JSON y CSV.
+- Cuenta demo y asignación de cuatro negocios aprobadas y aplicadas en la instancia Supabase configurada.
+- Health check básico en `/api/health`.
 
-### Parcial
+### Parcial / por validar
 
-- Ownership: aplicado a las APIs privadas mediante principales configurados; no existe todavía login multiusuario.
-- Persistencia de conversaciones: `Conversation` y `Message` se guardan en backend y está validado.
-- El ChatBubble todavía no recupera visualmente el historial tras recargar; es una mejora UX, no un fallo de persistencia.
-- Seguridad administrativa: los tokens globales se vinculan a un `User`, pero no representan sesiones individuales.
+- Se verificó el token administrativo global y sus APIs principales en Vercel; falta validar login individual y aislamiento real con el usuario propietario.
+- Las pruebas actuales de ownership usan Prisma simulado; faltan flujos E2E/integración.
+- El ChatBubble restaura hasta 100 mensajes en la misma pestaña; no hay sincronización entre dispositivos.
+- El backend persiste clasificaciones Gmail e implementa idempotencia; el workflow externo debe enviar `externalId` y `Idempotency-Key` estables.
+- La paleta de marca está preparada en cambios locales y aún no está desplegada.
 
-### Funcionalidad pendiente
+### Funcionalidad pendiente/bloqueada
 
-- NFC físico/hardware real.
-- Integración real de WhatsApp Cloud API.
+- NFC físico/hardware real y WhatsApp Cloud API real requieren recursos/credenciales de terceros.
+- Búsqueda semántica KB, exportación PDF, carga de archivos de imagen, borrado de datos y gestión de roles/settings requieren decisiones de diseño/operación.
+- Faltan monitoreo externo, alertas, backups y simulacro de recuperación.
 
-### UX
-
-- Recuperación visual del historial tras recargar.
-- Mejor feedback para providers lentos y mensajes largos.
-
-### Hardening, producción y QA
-
-- Asignación controlada de negocios históricos con `ownerId` nulo.
-- Tests automatizados, rate limiting, idempotencia n8n, observabilidad, backups y health checks.
-
-Ver: [[Pendientes generales]] y [[Roadmap TELAR]].
+Ver: [[Pendientes generales]], [[Pendientes TAG]], [[Pendientes AI]] y [[Roadmap TELAR]].

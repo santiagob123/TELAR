@@ -14,7 +14,7 @@
 - Fast-path y security-path deterministas.
 - Historial reciente limitado a seis mensajes previos.
 - Selección automática de KB relevante.
-- Exportación administrativa únicamente en JSON, agrupada por conversación.
+- Exportación de conversaciones a JSON y CSV; la UI permite imprimir/guardar como PDF con el navegador.
 - Filtros de conversaciones por fecha interpretados como calendario `America/Bogota`.
 - El login individual comparte sesión por usuario; el contexto AI y las conversaciones privadas se filtran por propietario. `AI_TOKEN`/`AI_USER_ID` siguen como compatibilidad temporal.
 - El endpoint interno de mensajes resuelve el contexto en servidor y no confía en un `businessId` enviado por el cliente.
@@ -25,14 +25,13 @@
 
 ## UX
 
-- El ChatBubble no recupera visualmente mensajes al recargar.
-- Ollama puede producir latencias largas.
-- Mejorar entrada para mensajes largos y estados de carga.
+- El ChatBubble restaura hasta 100 mensajes en la misma pestaña, no entre dispositivos.
+- Validar feedback ante providers realmente lentos/caídos y revisar UX móvil.
 
 ## Hardening y QA
 
 - Completar pruebas automatizadas de aislamiento entre propietarios.
-- Rate limiting, observabilidad y tests automatizados.
-- Asignar de forma controlada cualquier contexto o conversación histórica cuyo negocio no tenga propietario.
+- Rate limiting está implementado y desplegado; verificar cada entorno. Observabilidad externa, alertas, backups y E2E siguen pendientes.
+- Revisar cualquier contexto/conversación histórica sin propietario antes de un backfill; no asignar sin mapping aprobado.
 
 Ver: [[TELAR AI - Arquitectura]] y [[Pendientes AI]].

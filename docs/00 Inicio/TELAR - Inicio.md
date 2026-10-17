@@ -1,25 +1,18 @@
 # TELAR
 
-> Mapa de navegación del proyecto y acceso rápido al estado de trabajo.
+> Entrada y estado de trabajo del proyecto.
 
 ## Estado general
 
-El proyecto reúne TELAR TAG (perfiles públicos y QR) y TELAR AI (asistente y conversaciones). El estado de funcionalidades, limitaciones y preparación para producción se mantiene en las notas enlazadas; confirmar siempre contra el código antes de tomar decisiones de implementación.
+TELAR reúne TELAR TAG (perfiles públicos y QR) y TELAR AI (asistente y conversaciones). El estado de implementación se resume en las notas enlazadas; el backlog activo contiene únicamente tareas con dependencias externas o información que todavía debe llegar.
 
 ## Panel de trabajo
 
-- **Backlog priorizado:** [[PENDIENTES]]
+- **Pendientes externos/bloqueados:** [[PENDIENTES]]
 - **Auditoría funcional y evidencia:** [[AUDIT]]
-- **Bugs y retro:** [[Bugs]]
+- **Bugs y retro recibida:** [[Bugs]]
 - **Roadmap:** [[Roadmap TELAR]]
 - **Preparación para producción:** [[Antes de producción]]
-
-### En foco
-
-- [ ] Recibir el detalle de los bugs de la retro (pasos para reproducir y resultado esperado).
-- [ ] Recibir las pantallas o componentes cuya presentación visual se debe mejorar.
-- [ ] Resolver el drift del índice `Business_ownerId_idx` antes de continuar con rate limiting.
-- [ ] Rotar el secreto de n8n expuesto en configuración externa.
 
 ## Mapa del vault
 

@@ -53,8 +53,8 @@ export default function Admin() {
         <div className="grid gap-4 sm:grid-cols-3">
           <Link href="/ai" className="surface block p-5 no-underline transition hover:-translate-y-1 hover:shadow-lg">
             <span className="text-3xl">✦</span>
-            <h3 className="mt-4 text-lg font-bold">Asistente IA</h3>
-            <p className="muted mt-1 text-sm">Prueba y administra el asistente público.</p>
+            <h3 className="mt-4 text-lg font-bold">Automatización de mensajes</h3>
+            <p className="muted mt-1 text-sm">Prueba las respuestas de TELAR AI y revisa el estado del canal de WhatsApp.</p>
           </Link>
           <Link href="/ai/conversations" className="surface block p-5 no-underline transition hover:-translate-y-1 hover:shadow-lg">
             <span className="text-3xl">☷</span>

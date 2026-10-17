@@ -1,24 +1,17 @@
 # Bugs
 
-> Añadir una entrada cuando exista evidencia suficiente para reproducirla. No convertir comentarios generales de retro en bugs confirmados.
+> Registrar cada bug solo con evidencia reproducible; no convertir comentarios generales de retro en defectos confirmados.
 
-## Por clasificar de la retro
+## Retro pendiente de recibir
 
 | Estado | Información necesaria | Registro |
 |---|---|---|
-| Esperando detalle | Pantalla/componente, pasos para reproducir, resultado actual y esperado, frecuencia y evidencia (captura/video si existe). | Aún no se han recibido casos concretos. |
+| Esperando detalle | Pantalla/componente, pasos, resultado actual y esperado, frecuencia, captura/video si existe | Aún no se recibieron casos concretos. |
 
-## Confirmados por pruebas previas
+## Comportamiento conocido
 
-_No hay casos documentados en esta sección._
-
-## UX / mejoras conocidas
-
-- [ ] El ChatBubble no restaura el historial visible después de recargar; la persistencia backend sí está implementada.
-- [ ] Ollama puede mantener la UI en `Enviando...` durante una espera larga.
-- [ ] Mensajes largos usan un input de una sola línea en el ChatBubble.
-
-## Observaciones por verificar
-
-- [ ] Antes de retirar la UI independiente, se observó un 404 puntual al recargar `/chat`; actualmente `/chat` redirige a `/`. Reproducibilidad histórica: por verificar.
-- [ ] Variantes de nombre producidas por Ollama fueron corregidas con normalización acotada; mantener prueba de regresión.
+- ChatBubble restaura hasta 100 mensajes en la misma pestaña con `sessionStorage`; entre dispositivos no sincroniza historial visual.
+- El backend persiste `Conversation`/`Message`; el provider usa hasta seis mensajes previos para contexto.
+- El ChatBubble muestra estado al esperar provider y limita entradas largas. Latencias reales de provider requieren validación con las credenciales/configuración del entorno correspondiente.
+- `/chat` redirige a `/`; el 404 histórico al recargar esa ruta no tiene pasos reproducibles y no está confirmado como bug actual.
+- La normalización de nombres de Ollama está implementada; su regresión debe cubrirse con el set de pruebas del provider cuando se habilite ese entorno.

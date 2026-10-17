@@ -15,8 +15,8 @@
 
 ## Parcial
 
-- Autenticación administrativa mediante `ADMIN_TOKEN`.
-- El ownership se aplica a las APIs privadas mediante `ADMIN_USER_ID` y `Business.ownerId`.
+- El login individual por propietario está implementado/desplegado; el token global de compatibilidad sigue disponible temporalmente.
+- Las APIs privadas aplican ownership por `Business.ownerId`; falta validar el aislamiento de una sesión individual en Production.
 
 ## Por verificar
 
@@ -26,7 +26,7 @@
 
 ## Hardening
 
-- Los negocios históricos sin propietario deben asignarse mediante una operación controlada antes de usarlos desde el panel.
-- La autenticación continúa basada en un token global; todavía no existe login multiusuario.
+- Los cuatro negocios históricos aprobados se asignaron en la instancia Supabase configurada; repetir revisión en otros entornos.
+- Retirar el token global después de validar login individual y transición de propietarios.
 
 Ver: [[TELAR TAG - Arquitectura]] y [[Seguridad TAG]].

@@ -36,7 +36,6 @@ export default function SimulateTag(){
               placeholder="Ejemplo: tag1a2b3c4d" 
               value={id} 
               onChange={e=>{setId(e.target.value); setError('')}} 
-              autoFocus
             />
             <p className="muted text-xs mt-2">Lo encontrarás en el panel de administración cuando crees un negocio.</p>
             {error && <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-sm">{error}</div>}

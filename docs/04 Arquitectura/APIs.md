@@ -39,3 +39,5 @@ Las exportaciones JSON y CSV filtran por propietario y reutilizan los filtros `f
 - `POST /api/integrations/n8n/classify`
 
 Las APIs TAG privadas resuelven al usuario autenticado y filtran por `Business.ownerId`. `PATCH /api/profiles/[id]` edita también `imageUrl`, que acepta vacío o una URL HTTP/HTTPS de hasta 2048 caracteres; la ficha pública muestra esa imagen. La carga de archivos requiere integrar un proveedor de almacenamiento. Las APIs AI privadas aplican el mismo ownership al contexto técnico y las conversaciones. El borrado disponible por API se limita a entradas personalizadas de Knowledge Base. El endpoint de readiness devuelve solo el estado genérico de aplicación/base de datos.
+
+`GET /api/admin/users` lista las cuentas, el rol derivado de `ADMIN_USER_ID` y sus negocios asignados. `POST /api/admin/users` crea una cuenta propietaria con contraseña inicial hasheada. Ambos métodos requieren sesión o token de admin global; las cuentas propietarias reciben 403. La interfaz `/admin/users` ofrece el listado y alta básica. Reasignación, restablecimiento y baja de cuentas no están incluidos.

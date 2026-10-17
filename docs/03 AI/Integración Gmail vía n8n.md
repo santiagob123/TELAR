@@ -6,7 +6,7 @@ Canal externo activo, **one-way**. Vive en una instancia de n8n, no en el reposi
 
 **Estado:** PARCIAL
 **Prioridad:** P1
-**Bloqueo:** ninguno; pendiente de endurecimiento y versionado
+**Bloqueo:** requiere acceso a la instancia n8n para cambiar y exportar el workflow
 
 ## Flujo del workflow
 
@@ -38,21 +38,19 @@ Gmail Trigger → obtener mensaje completo → verificar duplicado (etiqueta `TE
 
 4. **`onError` faltantes:** algunos nodos Gmail no tienen rama de error configurada. Los fallos pueden ser silenciosos.
 
-5. **Persistencia recién implementada en código:** TELAR guarda la categoría, prioridad, resumen y acción sin guardar el cuerpo completo del correo. La escritura requiere aplicar la migración nueva; el workflow todavía debe enviar `externalId` para deduplicar.
+5. **Persistencia implementada en backend:** TELAR guarda categoría, prioridad, resumen y acción sin guardar el cuerpo completo del correo. La migración está aplicada en la instancia Supabase configurada; el workflow debe enviar `externalId` para deduplicar.
 
 6. **Workflow no versionado:** el JSON vive únicamente en la instancia n8n. No hay revisión, diff, ni respaldo en el repo.
-7. **Chat n8n:** TELAR admite `Idempotency-Key` estable por mensaje y devuelve la respuesta guardada ante reintentos. El workflow externo aún debe enviar ese header; la migración correspondiente debe estar aplicada.
+7. **Chat n8n:** TELAR admite `Idempotency-Key` estable por mensaje y devuelve la respuesta guardada ante reintentos. El workflow externo aún debe enviar ese header. La migración ya está aplicada en la instancia Supabase configurada.
 
 ## Próximos pasos
 
-- [ ] P0: rotar `x-n8n-secret` y moverlo a credentials de n8n.
-- [ ] Exportar el workflow y versionarlo en `docs/n8n/gmail-classifier.json` o similar.
-- [ ] Consolidar los nodos de etiquetas duplicados.
-- [ ] Activar `retryOnFail: true` en nodos Gmail críticos.
-- [ ] Configurar `onError` en todos los nodos Gmail.
-- [ ] Aplicar migración y configurar `externalId` estable en el nodo de clasificación.
-- [ ] Enviar `Idempotency-Key` estable en los mensajes de chat n8n.
-- [ ] Métricas básicas: correos procesados por categoría, prioridad, errores.
+Cuando esté disponible el acceso a n8n:
+
+1. Rotar `x-n8n-secret` y moverlo a credentials seguras.
+2. Enviar `externalId` estable a clasificación e `Idempotency-Key` estable al chat.
+3. Revisar nodos duplicados, reintentos, `onError` y métricas básicas.
+4. Exportar/versionar workflow sin secretos ni datos privados.
 
 ## Relación con otros documentos
 

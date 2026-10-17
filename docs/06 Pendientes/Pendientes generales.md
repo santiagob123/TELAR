@@ -1,34 +1,25 @@
 # Pendientes generales
 
-## Funcionalidad
+El trabajo que puede completarse directamente en el repositorio se refleja como implementado en [[PENDIENTES]] y [[AUDIT]]. Esta nota conserva dependencias operativas y externas.
 
-- [ ] Integrar NFC físico/hardware real.
-- [ ] Integrar WhatsApp Cloud API real.
+## Integraciones/credenciales externas
 
-## UX / mejoras
+- Actualizar/versionar el workflow Gmail n8n con secreto rotado, `Idempotency-Key`, `externalId`, reintentos y manejo de errores.
+- Integrar WhatsApp Cloud API cuando haya cuenta/número de negocio y credenciales.
+- Integrar NFC físico cuando haya lector y autorización.
 
-- [x] Recuperar historial visual del ChatBubble tras recarga en la misma pestaña.
-- [x] Mejorar feedback de provider lento.
-- [x] Limitar y manejar mensajes largos.
-- [x] Mejorar estados de carga, accesibilidad básica y responsividad del chat.
+## Producción y cuentas
 
-## Hardening / producción
+- Validar login individual y aislamiento por propietario en Vercel con credenciales propietarias; retirar tokens legacy después.
+- Configurar monitoreo, alertas, backups y recuperación con acceso a Vercel/Supabase.
+- Verificar migraciones y rate limits en entornos adicionales antes de habilitarlos.
 
-- [x] Aplicar ownership y autorización por recurso en APIs privadas TAG y AI.
-- [ ] Provisionar usuarios y configurar los principales `ADMIN_USER_ID`/`AI_USER_ID`.
-- [x] Asignar los cuatro negocios históricos aprobados a la cuenta de demostración en Supabase.
-- [ ] Sustituir o limitar tokens globales.
-- [x] Añadir rate limiting; migraciones aplicadas en Supabase configurada, falta desplegar el código y verificar otros entornos.
-- [ ] Añadir observabilidad, alertas, backups y simulacro de recuperación.
-- [x] Añadir health check básico; falta monitoreo externo.
-- [x] Añadir soporte de idempotencia para n8n; falta enviar la clave desde el workflow.
+## Decisiones e información que faltan
 
-## QA / Tests
+- Definir servicio de almacenamiento para carga de imágenes y política de retención/borrado de datos.
+- Definir proveedor/costo de búsqueda semántica y opciones editables de Settings; el listado/alta básica de propietarios ya está implementado localmente.
+- Incorporar bugs y mejoras de retro al recibir sus pasos de reproducción, resultado esperado y referencias visuales.
 
-- [ ] Añadir tests automatizados.
-- [ ] Cubrir APIs críticas y aislamiento de ownership.
+## Calidad
 
-## Documentación
-
-- [ ] Mantener este Vault sincronizado con cambios reales.
-- [ ] Persistir en TELAR las clasificaciones del workflow Gmail externo y versionarlo en el repo (canal activo, one-way).
+La suite de ownership actual usa Prisma simulado. La cobertura E2E/runtime con cuentas y datos aislados debe realizarse cuando haya un entorno de prueba/credenciales apropiadas; la validación de Vercel reportada en [[AUDIT]] solo cubrió el token administrativo global.

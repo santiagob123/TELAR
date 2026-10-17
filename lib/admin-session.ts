@@ -3,20 +3,27 @@ import { ADMIN_SESSION_COOKIE } from './admin-session-constants'
 
 export { ADMIN_SESSION_COOKIE }
 
-function getSessionDigest(token: string) {
-  return createHmac('sha256', token).update('telar-admin-session').digest('hex')
+const SESSION_SECONDS = 60 * 60 * 8
+
+function getSessionDigest(token: string, expiresAt: number) {
+  return createHmac('sha256', token).update(`telar-admin-session:${expiresAt}`).digest('hex')
 }
 
 export function createAdminSession(token: string) {
-  return getSessionDigest(token)
+  const expiresAt = Math.floor(Date.now() / 1000) + SESSION_SECONDS
+  return `${expiresAt}.${getSessionDigest(token, expiresAt)}`
 }
 
 export function hasValidAdminSession(value?: string) {
   const configuredToken = process.env.ADMIN_TOKEN
   if (!configuredToken || !value) return false
 
-  const expected = Buffer.from(getSessionDigest(configuredToken))
-  const received = Buffer.from(value)
+  const [expiresText, signature, extra] = value.split('.')
+  const expiresAt = Number(expiresText)
+  if (extra || !Number.isSafeInteger(expiresAt) || expiresAt <= Date.now() / 1000 || !signature) return false
+
+  const expected = Buffer.from(getSessionDigest(configuredToken, expiresAt))
+  const received = Buffer.from(signature)
   return expected.length === received.length && timingSafeEqual(expected, received)
 }
 

@@ -1,9 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createHash, randomUUID } from 'crypto'
-import { getAIContext } from '../../../../services/ai/context'
+import { getPublicAIContext } from '../../../../services/ai/context'
 import { handleIncoming } from '../../../../services/ai/conversation'
 import { consumeRateLimit, RATE_LIMITS, respondRateLimited } from '../../../../lib/rate-limit'
 import prisma from '../../../../lib/prisma'
+import { secureCompare } from '../../../../lib/secure-compare'
 
 const MAX_MESSAGE_LENGTH = 2000
 const MAX_SESSION_LENGTH = 100
@@ -15,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const configuredSecret = process.env.N8N_WEBHOOK_SECRET
   const receivedSecret = req.headers['x-n8n-secret']
-  if (!configuredSecret || typeof receivedSecret !== 'string' || receivedSecret !== configuredSecret) {
+  if (!secureCompare(receivedSecret, configuredSecret)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -91,7 +92,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const context = await getAIContext()
+    const context = await getPublicAIContext()
     console.info('[TELAR AI] n8n_chat', {
       businessId: context.id,
       businessName: context.name,

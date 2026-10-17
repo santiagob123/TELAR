@@ -159,14 +159,15 @@ export async function consumeRateLimitWithDevelopmentFallback(input: {
 }
 
 /**
- * Login-specific fallback keeps account access available during DB limiter
- * migrations/outages. Other application limits remain fail-closed.
+ * Login throttling must fail closed in production so database outages cannot
+ * silently reduce the limit to a per-instance counter.
  */
 export async function consumeLoginRateLimit(req: NextApiRequest): Promise<RateLimitResult> {
   const key = `login:${extractClientIp(req)}`
   try {
     return await consumeRateLimit({ key, limit: 5, windowMs: 60_000 })
   } catch (error) {
+    if (process.env.NODE_ENV === 'production') throw error
     if (!warnedAboutLoginFallback) {
       warnedAboutLoginFallback = true
       console.warn('[TELAR] persistent login rate limiter unavailable; using per-instance fallback', error instanceof Error ? error.message : 'unknown error')

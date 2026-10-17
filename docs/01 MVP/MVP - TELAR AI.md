@@ -14,7 +14,7 @@ TELAR AI dispone de chat público, entorno interno, persistencia de conversacion
 - Historial limitado a seis mensajes previos enviados al provider.
 - Providers Ollama, OpenAI, Gemini y fallback.
 - Selección automática de KB relevante.
-- Exportación administrativa únicamente en JSON mediante `/api/ai/conversations/export-json`, agrupada por conversación y respetando filtros de fecha en `America/Bogota`.
+- Exportación administrativa JSON/CSV agrupada por conversación; la UI permite imprimir/guardar como PDF desde el navegador. Los filtros de fecha usan `America/Bogota`.
 - Integración privada con n8n.
 
 ## Funcionalidad pendiente
@@ -23,11 +23,11 @@ TELAR AI dispone de chat público, entorno interno, persistencia de conversacion
 
 ## UX y operación
 
-- Recuperación visual del historial del ChatBubble después de recargar.
-- Mejor feedback ante providers lentos y mensajes largos.
+- Historial visual restaurado en la misma pestaña (hasta 100 mensajes); validar comportamiento entre dispositivos si se requiere.
+- Probar UX con providers realmente lentos/caídos y revisar mobile.
 
 ## Hardening y QA
 
-- Ownership/autorización por recurso, rate limiting, idempotencia n8n, observabilidad, backups y tests automatizados.
+- Ownership/autorización, rate limiting e idempotencia backend están implementados y desplegados. Pendientes: validar límites/aislamiento en entornos reales, configurar idempotencia en el workflow externo, observabilidad, backups y pruebas E2E.
 
 Ver: [[TELAR AI - Estado]], [[TELAR AI - Arquitectura]], [[Providers]].

@@ -3,12 +3,16 @@ import { AI_SESSION_COOKIE, createAiSession } from '../../../lib/ai-session'
 import prisma from '../../../lib/prisma'
 import { createUserSession, userSessionCookie, verifyPassword } from '../../../lib/user-session'
 import { consumeLoginRateLimit, respondRateLimited } from '../../../lib/rate-limit'
+import { secureCompare } from '../../../lib/secure-compare'
+import { requireSameOriginMutation } from '../../../lib/request-security'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.status(405).end()
     return
   }
+
+  if (!requireSameOriginMutation(req, res, { requireForAll: true })) return
 
   try {
     const limited = await consumeLoginRateLimit(req)
@@ -25,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const configuredToken = process.env.AI_TOKEN
     if (!configuredToken) return res.status(503).json({ error: 'TELAR AI no está configurado.' })
     const token = typeof req.body?.token === 'string' ? req.body.token : ''
-    if (token !== configuredToken) return res.status(401).json({ error: 'Credenciales incorrectas.' })
+    if (!secureCompare(token, configuredToken)) return res.status(401).json({ error: 'Credenciales incorrectas.' })
 
     const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
     res.setHeader('Set-Cookie', `${AI_SESSION_COOKIE}=${createAiSession(configuredToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${secure}`)

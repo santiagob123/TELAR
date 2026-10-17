@@ -1,37 +1,13 @@
 # Pendientes AI
 
-## Funcionalidad
+El código de AI incluye contexto/KB, conversación, handoff, paginación, exportación JSON/CSV, impresión PDF desde navegador, ownership y rate limiting. La verificación de producción del token global está documentada en [[AUDIT]].
 
-- [ ] Integrar WhatsApp Cloud API real.
+## Dependencias externas y decisiones
 
-## Seguridad
-
-- [ ] Mantener y ampliar tests del security-path.
-- [ ] Revisar secretos y credenciales de despliegue.
-- [x] Añadir rate limiting a endpoints públicos y privados; migraciones aplicadas en Supabase configurada, falta desplegar el código actualizado en Vercel.
-
-## UX / mejoras
-
-- [x] Recuperar historial visual del ChatBubble después de recargar en la misma pestaña.
-- [x] Mostrar mejor estado cuando el proveedor tarda.
-- [x] Manejar timeout visible en frontend.
-- [x] Limitar y manejar entradas largas.
-- [x] Mejorar estados de carga, feedback accesible y responsividad básica del ChatBubble.
-
-## Hardening / producción
-
-- [x] Añadir health check básico; observabilidad y alertas siguen pendientes.
-- [x] Añadir soporte de idempotencia para reintentos n8n; falta configurar el workflow externo.
-- [x] Aplicar ownership/autorización por recurso en el contexto, conversaciones y exportación privadas.
-- [ ] Asignar contextos históricos sin `ownerId` mediante una operación controlada.
-- [x] Añadir rate limiting y configurar `SESSION_SECRET` local y en Vercel Production; desplegar el código actualizado sigue pendiente.
-- [ ] Añadir backups y recuperación.
-
-## Integraciones no confirmadas
-
-- [x] Persistir en TELAR las clasificaciones del workflow Gmail vía n8n (canal externo activo, one-way); falta versionar la exportación del workflow.
-
-## QA / Tests
-
-- [ ] Crear tests unitarios para fast-path, security-path, KB, historial y fallback.
-- [ ] Crear pruebas de providers lentos, caídos y con respuesta vacía.
+- WhatsApp Cloud API real: requiere cuenta/número y credenciales de WhatsApp Business.
+- Gmail/n8n: rotar secreto, actualizar workflow para `Idempotency-Key` y `externalId`, añadir manejo de reintentos/errores y versionar exportación saneada.
+- Login AI individual: validar sesión y aislamiento de propietario en Production antes de retirar token legacy.
+- Operación Production: definir proveedor activo/timeouts, configurar monitoreo/alertas/backups/recuperación y comprobar cada entorno.
+- Búsqueda semántica: definir proveedor, almacenamiento vectorial, costo y fallback.
+- QA E2E: ejecutar en un entorno aislado con credenciales/configuración de providers controladas; las pruebas actuales usan Prisma simulado.
+- Retro/UX: recibir casos de provider lento/caído y mejoras visuales concretas.

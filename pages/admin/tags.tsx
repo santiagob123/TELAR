@@ -57,8 +57,9 @@ export default function TagsAdmin() {
           <h2 className="font-semibold mb-4">Información del negocio</h2>
           <form onSubmit={create} className="space-y-4">
             <div>
-              <label className="block text-sm font-semibold mb-1">Nombre del negocio *</label>
+              <label htmlFor="business-name" className="block text-sm font-semibold mb-1">Nombre del negocio *</label>
               <input 
+                id="business-name"
                 required
                 placeholder="Ej: Cafetería El Puente" 
                 value={form.name} 
@@ -67,8 +68,9 @@ export default function TagsAdmin() {
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold mb-1">Descripción (breve) *</label>
+              <label htmlFor="business-description" className="block text-sm font-semibold mb-1">Descripción (breve) *</label>
               <textarea 
+                id="business-description"
                 required
                 placeholder="Ej: Los mejores cafés y pasteles del barrio" 
                 value={form.description} 
@@ -78,8 +80,9 @@ export default function TagsAdmin() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold mb-1">Teléfono *</label>
+                <label htmlFor="business-phone" className="block text-sm font-semibold mb-1">Teléfono *</label>
                 <input 
+                  id="business-phone"
                   required
                   placeholder="Ej: +1 234 567 8900" 
                   value={form.contactPhone} 
@@ -88,8 +91,9 @@ export default function TagsAdmin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">WhatsApp *</label>
+                <label htmlFor="business-whatsapp" className="block text-sm font-semibold mb-1">WhatsApp *</label>
                 <input 
+                  id="business-whatsapp"
                   required
                   placeholder="Ej: +1 234 567 8900" 
                   value={form.whatsapp} 
@@ -101,8 +105,9 @@ export default function TagsAdmin() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold mb-1">Identificador del TAG</label>
+                <label htmlFor="tag-identifier" className="block text-sm font-semibold mb-1">Identificador del TAG</label>
                 <input 
+                  id="tag-identifier"
                   placeholder="Ej: tagcafe123" 
                   value={form.identifier} 
                   onChange={e => setForm({ ...form, identifier: e.target.value })} 
@@ -110,8 +115,9 @@ export default function TagsAdmin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Estado inicial</label>
+                <label htmlFor="tag-status" className="block text-sm font-semibold mb-1">Estado inicial</label>
                 <select
+                  id="tag-status"
                   value={form.status}
                   onChange={e => setForm({ ...form, status: e.target.value })}
                   className="w-full rounded-lg border border-[#cbd9d6] p-3 focus:border-[#087f78] focus:ring-2 focus:ring-[#d8eea8] outline-none transition"
@@ -124,8 +130,9 @@ export default function TagsAdmin() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-semibold mb-1">Correo electrónico</label>
+                <label htmlFor="business-email" className="block text-sm font-semibold mb-1">Correo electrónico</label>
                 <input 
+                  id="business-email"
                   type="email"
                   placeholder="Ej: contacto@negocio.com" 
                   value={form.email} 
@@ -134,8 +141,9 @@ export default function TagsAdmin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Sitio web</label>
+                <label htmlFor="business-website" className="block text-sm font-semibold mb-1">Sitio web</label>
                 <input 
+                  id="business-website"
                   placeholder="https://ejemplo.com" 
                   value={form.website} 
                   onChange={e => setForm({ ...form, website: e.target.value })} 
@@ -145,8 +153,9 @@ export default function TagsAdmin() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-1">Dirección</label>
+              <label htmlFor="business-address" className="block text-sm font-semibold mb-1">Dirección</label>
               <input 
+                id="business-address"
                 placeholder="Ej: Av. San Martín 123" 
                 value={form.address} 
                 onChange={e => setForm({ ...form, address: e.target.value })} 
@@ -155,8 +164,9 @@ export default function TagsAdmin() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold mb-1">Horarios</label>
+              <label htmlFor="business-hours" className="block text-sm font-semibold mb-1">Horarios</label>
               <input 
+                id="business-hours"
                 placeholder="Ej: Lun a Vie 9:00 - 18:00" 
                 value={form.openingHours} 
                 onChange={e => setForm({ ...form, openingHours: e.target.value })} 
@@ -166,8 +176,9 @@ export default function TagsAdmin() {
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <label className="block text-sm font-semibold mb-1">Instagram</label>
+                <label htmlFor="business-instagram" className="block text-sm font-semibold mb-1">Instagram</label>
                 <input 
+                  id="business-instagram"
                   placeholder="@negocio" 
                   value={form.instagram} 
                   onChange={e => setForm({ ...form, instagram: e.target.value })} 
@@ -175,8 +186,9 @@ export default function TagsAdmin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">Facebook</label>
+                <label htmlFor="business-facebook" className="block text-sm font-semibold mb-1">Facebook</label>
                 <input 
+                  id="business-facebook"
                   placeholder="@negocio" 
                   value={form.facebook} 
                   onChange={e => setForm({ ...form, facebook: e.target.value })} 
@@ -184,8 +196,9 @@ export default function TagsAdmin() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-semibold mb-1">LinkedIn</label>
+                <label htmlFor="business-linkedin" className="block text-sm font-semibold mb-1">LinkedIn</label>
                 <input 
+                  id="business-linkedin"
                   placeholder="@negocio" 
                   value={form.linkedin} 
                   onChange={e => setForm({ ...form, linkedin: e.target.value })} 

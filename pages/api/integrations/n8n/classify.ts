@@ -3,7 +3,8 @@ import { randomUUID } from 'crypto'
 import { generateAIResponse, getAIProvider } from '../../../../services/ai/provider'
 import { consumeRateLimit, RATE_LIMITS, respondRateLimited } from '../../../../lib/rate-limit'
 import prisma from '../../../../lib/prisma'
-import { getAIContext } from '../../../../services/ai/context'
+import { secureCompare } from '../../../../lib/secure-compare'
+import { getPublicAIContext } from '../../../../services/ai/context'
 
 type Classification = {
   categoria: 'empleo' | 'spam' | 'red_social' | 'suscripcion' | 'factura' | 'promocion' | 'personal' | 'trabajo' | 'seguridad' | 'notificacion' | 'otro'
@@ -105,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const configuredSecret = process.env.N8N_WEBHOOK_SECRET
   const receivedSecret = req.headers['x-n8n-secret']
-  if (!configuredSecret || typeof receivedSecret !== 'string' || receivedSecret !== configuredSecret) {
+  if (!secureCompare(receivedSecret, configuredSecret)) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
 
@@ -166,7 +167,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(502).json({ error: 'AI classification failed' })
     }
 
-    const context = await getAIContext()
+    const context = await getPublicAIContext()
     if (typeof externalId === 'string') {
       await prisma.$executeRaw`
         INSERT INTO "EmailClassification" ("id", "businessId", "externalId", "categoria", "prioridad", "resumen", "requiereAccion", "accionSugerida")

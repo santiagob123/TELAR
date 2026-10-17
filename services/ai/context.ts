@@ -99,3 +99,32 @@ export async function getAIContext(ownerId?: string) {
   if (!context) throw new Error('El contexto de TELAR AI no está inicializado.')
   return context
 }
+
+/** Public chat uses the global administrator's TELAR AI context, or the legacy ownerless context. */
+export async function getPublicAIContext() {
+  const adminId = process.env.ADMIN_USER_ID?.trim()
+  if (adminId) {
+    const adminContext = await prisma.business.findFirst({
+      where: {
+        name: AI_CONTEXT_NAME,
+        profile: { is: null },
+        ownerId: adminId
+      },
+      select: { id: true, name: true }
+    })
+
+    if (adminContext) return adminContext
+  }
+
+  const legacyContext = await prisma.business.findFirst({
+    where: {
+      name: AI_CONTEXT_NAME,
+      profile: { is: null },
+      ownerId: null
+    },
+    select: { id: true, name: true }
+  })
+
+  if (!legacyContext) throw new Error('El contexto de TELAR AI no está inicializado.')
+  return legacyContext
+}

@@ -1,19 +1,33 @@
 # Antes de producción
 
-- [x] Aplicar y verificar las 8 migraciones en la instancia Supabase configurada; verificar también cualquier entorno adicional.
-- [ ] Rotar cualquier secreto expuesto durante desarrollo.
-- [x] Implementar ownership y autorización por recurso para APIs privadas.
-- [x] Provisionar una cuenta de demostración; desplegar el código de login sigue pendiente.
-- [x] Revisar, aprobar y aplicar el mapping de cuatro negocios históricos a la cuenta de demostración en Supabase.
-- [ ] Añadir pruebas E2E críticas. No se añadieron ni ejecutaron pruebas en esta iteración.
-- [ ] Configurar logs, métricas y alertas; existe un health check básico en `/api/health`.
-- [ ] Definir backups y recuperación.
-- [x] Implementación de rate limiting y migraciones aplicadas en la instancia Supabase configurada; falta desplegar el código y revisar cada entorno adicional.
-- [ ] Confirmar provider de producción y timeouts.
-- [ ] Decidir estado de WhatsApp y n8n.
-- [ ] Revisar accesibilidad y UX móvil.
+## Implementación confirmada
 
+- [x] Aplicar las ocho migraciones en la instancia Supabase configurada.
+- [x] Implementar ownership y autorización por recurso en APIs privadas.
+- [x] Provisionar cuenta demo, configurar `SESSION_SECRET` y desplegar login individual.
+- [x] Revisar/aprobar y asignar cuatro negocios históricos a la cuenta demo en la instancia Supabase configurada.
+- [x] Implementar rate limiting y desplegar código; existe `/api/health`.
+- [x] Soportar idempotencia de chat y persistencia de clasificaciones en backend.
+- [x] Confirmar deployment Production Ready `8c5c678`; verificar login del token de compatibilidad y APIs administrativas.
 
-## Migraciones de cambios recientes
+## Hardening local — 2026-10-16
 
-Las migraciones de rate limiting, clasificaciones, idempotencia n8n, Knowledge Base editable y paginación están aplicadas y verificadas en la instancia Supabase configurada. Repite la comprobación en cada entorno adicional antes de habilitar allí estas funciones.
+- [x] Actualizar dependencias de producción; `npm audit --omit=dev` reporta cero vulnerabilidades.
+- [x] Migrar Tailwind CSS 4 y PostCSS; `npm audit` completo reporta cero vulnerabilidades y el inicio se revisó en navegador local.
+- [x] Añadir validación de origen para mutaciones autenticadas, expiración de ocho horas a cookies legacy, límite de login fail-closed en producción y cabeceras de seguridad.
+- [x] Ejecutar build y smoke local de cabeceras, respuestas no autenticadas, CSRF y expiración de cookies.
+- [ ] Desplegar estos cambios; el código aún no está en Production.
+- [ ] Completar las verificaciones runtime de CSRF, expiración, rate limiting y aislamiento descritas en [[Pruebas de seguridad]].
+
+## Dependencias externas pendientes
+
+- Rotar el valor de `N8N_WEBHOOK_SECRET` (enviado como `x-n8n-secret`) tanto en Vercel Production como en n8n, y comprobar que el secreto anterior ya no funciona.
+- Configurar workflow n8n para `Idempotency-Key`/`externalId`, reintentos y manejo de errores; versionar exportación saneada.
+- Validar login individual/islamiento usando credenciales del propietario en Production antes de retirar tokens globales.
+- Configurar monitoreo, alertas, backups y recuperación con los responsables/proveedores de Vercel y Supabase.
+- Verificar migraciones y límites en cualquier ambiente adicional antes de usarlo.
+- Confirmar provider/credenciales de producción y coordinar una verificación controlada de timeouts.
+- Obtener cuenta/número WhatsApp Business y hardware/permisos NFC si se van a habilitar esas funciones.
+- Recibir los casos concretos de retro y criterios de revisión visual.
+
+Las pruebas actuales de ownership usan Prisma simulado; la respuesta 200 de APIs en Production no representa cobertura E2E ni prueba de acceso por usuario propietario.

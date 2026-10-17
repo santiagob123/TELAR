@@ -15,7 +15,9 @@ export async function handleIncoming(
   businessId: string,
   from: string,
   text: string,
-  idempotencyKey?: string
+  idempotencyKey?: string,
+  onToken?: (chunk: string) => void,
+  assistantName = 'TELAR AI'
 ): Promise<
   | { conv: Conversation; aiReply: string; handedOff: false }
   | { conv: Conversation; aiReply: null; handedOff: true }
@@ -106,7 +108,7 @@ export async function handleIncoming(
   }
 
   // 5. Generar la respuesta de IA pasando la identidad exacta del mensaje actual.
-  const aiReply = await answerMessage(businessId, normalizedText, conv.id, inboundMessage.id)
+  const aiReply = await answerMessage(businessId, normalizedText, conv.id, inboundMessage.id, onToken, assistantName)
 
   // 6. Persistir la respuesta del asistente.
   if (idempotencyKey) {

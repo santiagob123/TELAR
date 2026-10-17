@@ -1,50 +1,44 @@
 # Auditoría funcional
 
-| Área | Funcionalidad | Estado | Evidencia | Pendiente | Prioridad |
-|---|---|---|---|---|---|
-| TAG | Página pública activa e inactiva (P1 #1) | COMPLETA | lib/public-tag.ts:54,57; pages/tag/[id].tsx:17 | P2 pendiente: evaluar 404 HTTP dedicado en SSR (pages/tag/[id].tsx:157) | P2 |
-| TAG | GET /api/tags/[id] público | COMPLETA | pages/api/tags/[id].ts:9,12 | — | — |
-| TAG | NFC físico (lectura real) | PENDIENTE | — | Bloqueado: sin permiso/credencial externa | P1 |
-| Conversaciones | Derivación a una persona (backend + UI) | COMPLETA | services/ai/conversation.ts:28,67; pages/ai/conversations.tsx:193 | — | — |
-| Conversaciones | POST /api/ai/conversations/[id]/messages | COMPLETA | pages/api/ai/conversations/[id]/messages.ts:10,35 | — | — |
-| Conversaciones | Composer de respuesta humana en /ai | COMPLETA | pages/ai/conversations.tsx:112,214 | — | — |
-| Conversaciones | Reabrir asistente desde UI | COMPLETA | pages/ai/conversations.tsx:134,195 | — | — |
-| TELAR AI | Pantalla interna /ai con handoff visible | COMPLETA | pages/ai/index.tsx:67,69 | — | — |
-| Chat público | Respuesta con handedOff | COMPLETA | pages/api/chat/message.ts:34,35 | — | — |
-| Chat público | Aviso de sistema cuando handedOff=true | COMPLETA | components/usePublicChat.ts:3,36,37 | — | — |
-| Auth | Login individual con aislamiento por propietario | PARCIAL | lib/user-session.ts; lib/admin-auth.ts; lib/ai-auth.ts; pages/api/admin/login.ts; pages/api/ai/login.ts | Cuenta demo, asignaciones aprobadas y `SESSION_SECRET` local/Vercel Production listos; falta desplegar código y retirar tokens globales tras validar | P1 |
-| Auth | Backfill ownerId históricos | PENDIENTE DE REVISIÓN | scripts/backfill-owner.ts; consulta de negocios a Supabase | Propuesta de cuatro negocios sin owner a la cuenta demo; pendiente aprobación, aún sin asignar | P1 |
-| Integraciones | WhatsApp Cloud API real | PENDIENTE | — | Bloqueado: sin número WhatsApp Business | P1 |
-| Integraciones | Gmail vía n8n | PARCIAL | Workflow n8n externo | One-way; sin persistencia en TELAR; no versionado en repo | P1 |
-| Integraciones | Rotar y asegurar x-n8n-secret | PENDIENTE | Workflow Gmail externo | P0 de seguridad | P0 |
-| Integraciones | Idempotencia n8n chat | PARCIAL | pages/api/integrations/n8n/chat.ts; services/ai/conversation.ts; prisma/schema.prisma | Migración aplicada en Supabase configurada; el workflow debe enviar `Idempotency-Key` | P1 |
-| Integraciones | Persistir clasificaciones n8n en TELAR | PARCIAL | pages/api/integrations/n8n/classify.ts; prisma/schema.prisma | Migración aplicada; n8n debe enviar `externalId` | P1 |
-| Integraciones | Versionar workflow Gmail en repo | PENDIENTE | Workflow n8n externo | — | P1 |
-| Producción | Rate limit chat público + APIs sensibles | PARCIAL | lib/rate-limit.ts; pages/api/chat/message.ts; pages/api/ai/message.ts; pages/api/integrations/n8n/chat.ts; pages/api/integrations/n8n/classify.ts | Ocho migraciones verificadas en Supabase configurada; código local pendiente de despliegue | P1 |
-| Producción | Backups + health + alertas | PARCIAL | pages/api/health.ts | Falta monitor externo, backups y recuperación | P1 |
-| Doc | DIRECT_URL en .env.example | COMPLETA | .env.example | — | — |
-| Doc | README actualizado | COMPLETA | README.md | — | — |
-| AI | Timeout explícito de OpenAI | COMPLETA | services/ai/provider.ts; .env.example | — | — |
-| AI | Lectura de contexto sin escrituras implícitas | COMPLETA | services/ai/context.ts; pages/api/ai/init.ts | — | — |
-| Producción | Endpoint de readiness | PARCIAL | pages/api/health.ts | Falta monitor externo y alertas | P2 |
-| TAG | Edición de nombre del negocio | COMPLETA | pages/api/profiles/[id].ts; pages/admin/profile.tsx | — | — |
-| TAG | 404 HTTP para TAG inexistente | COMPLETA | pages/tag/[id].tsx | — | — |
-| AI | UI y sincronización de Knowledge Base | PARCIAL | pages/ai/knowledge.tsx; pages/api/ai/knowledge.ts; services/ai/knowledge.ts | Migración de `isEditable` aplicada en Supabase configurada; código local pendiente de despliegue | P2 |
-| Conversaciones | Paginación de conversaciones y mensajes | PARCIAL | lib/ai-conversations.ts; pages/api/ai/conversations.ts; pages/api/ai/conversations/[id]/messages.ts; pages/ai/conversations.tsx | Índice aplicado en Supabase configurada; verificar en entornos adicionales y desplegar código | P2 |
-| Limpieza | Redirección de rutas AI legacy | COMPLETA | middleware.ts | — | — |
-| QA | Tests E2E reales | PENDIENTE | — | No se ejecutaron ni añadieron pruebas en esta tarea | P2 |
+> Actualizado: 2026-10-16. La auditoría distingue código en `main`, cambios locales, verificación de endpoints en Production y dependencias externas. No implica que cada flujo de usuario tenga cobertura E2E.
 
-## Integraciones externas (fuera del repo)
+| Área | Funcionalidad | Estado | Evidencia / comprobación | Pendiente |
+|---|---|---|---|---|
+| TAG | Páginas públicas, estados active/inactive y 404 SSR | COMPLETA | `lib/public-tag.ts`; `pages/tag/[id].tsx`; revisión visual a 390 px y URL del QR demo123 | Escanear etiqueta QR física con un teléfono real. |
+| TAG | Perfil y APIs privadas con ownership | IMPLEMENTADA | `pages/api/profiles/*`; `pages/api/tags/*`; `lib/admin-auth.ts` | Validar aislamiento con una sesión individual en Production. |
+| TAG | Lectura NFC física | PENDIENTE | Solo está disponible el simulador | Bloqueado por hardware/permisos externos. |
+| Auth | Sesión individual por correo/contraseña y alcance global del admin configurado | DESPLEGADA | `lib/user-session.ts`; `lib/admin-auth.ts`; `lib/ai-auth.ts`; commit Production `8c5c678` | Verificar login individual de admin y propietario en Production. |
+| Admin | Listado/alta de cuentas propietarias, roles derivados y negocios asignados | IMPLEMENTADO LOCALMENTE | `pages/admin/users.tsx`; `pages/api/admin/users.ts`; `ADMIN_USER_ID` distingue admin de propietario | Desplegar; la reasignación y recuperación de cuentas no están incluidas. |
+| Auth | Identidad global de compatibilidad | VERIFICADA | `ADMIN_USER_ID` configurado en Vercel Production para `admin@example.com`; login por token 204 y APIs admin 200 | Retirar tokens globales solo después de validar propietarios y migración completa. |
+| Seguridad | Hardening de sesión, CSRF, secretos, rate limiting y cabeceras | IMPLEMENTADO LOCALMENTE; PENDIENTE DE DESPLIEGUE | `lib/request-security.ts`; `lib/secure-compare.ts`; Next 15.5.28; Tailwind 4.3.3; `npm audit` y `npm run build` pasan; smoke local aprobado | Desplegar y completar pruebas runtime con dos cuentas; rotar `N8N_WEBHOOK_SECRET` en Vercel y n8n. |
+| Datos | Asignación de cuatro negocios históricos | COMPLETA EN SUPABASE CONFIGURADA | Mapping aprobado y backfill aplicado | Verificar por separado otros entornos. |
+| TELAR AI | Conversaciones, handoff humano y paginación | IMPLEMENTADA / ENDPOINTS VERIFICADOS | `/api/ai/conversations` devolvió 200; `lib/ai-conversations.ts`; páginas de conversaciones | Pruebas E2E y revisión del comportamiento móvil. |
+| TELAR AI | Knowledge Base personalizada y sincronización | IMPLEMENTADA / ENDPOINT VERIFICADO | `/api/ai/knowledge` devolvió 200 y 14 entradas; `services/ai/knowledge.ts` | Búsqueda semántica pendiente de decisión técnica. |
+| Chat público | Historial visible y persistido | IMPLEMENTADO EN LA MISMA PESTAÑA | `components/usePublicChat.ts` guarda/restaura hasta 100 mensajes en `sessionStorage`; DB persiste conversaciones | No existe restauración entre dispositivos. |
+| AI | Providers, fallback y timeout explícito | IMPLEMENTADA | `services/ai/provider.ts`; `services/ai/index.ts` | Probar provider lento/caído/vacío en pruebas automatizadas. |
+| Integraciones | Clasificación de Gmail persistida en TELAR | IMPLEMENTADA EN BACKEND | `pages/api/integrations/n8n/classify.ts`; persistencia por `externalId`; usa el contexto del admin configurado | Falta cambiar/verificar el workflow externo y versionar su exportación saneada. |
+| Integraciones | Idempotencia del chat n8n | IMPLEMENTADA EN BACKEND | `pages/api/integrations/n8n/chat.ts` acepta `Idempotency-Key` y resuelve el contexto del admin configurado | El workflow debe enviar claves estables. |
+| Integraciones | Secreto de n8n | RIESGO ABIERTO | Secreto reportado como expuesto en workflow externo | Rotarlo en n8n y pasarlo a credenciales seguras. |
+| Producción | Rate limiting y readiness | IMPLEMENTADO; VERIFICACIÓN PARCIAL | `lib/rate-limit.ts`; `pages/api/health.ts`; migraciones aplicadas en la instancia Supabase configurada | Verificar límites en Production y esquema en cada entorno adicional; falta monitor externo/alertas. |
+| Producción | Backups y recuperación | PENDIENTE | No hay evidencia de política/simulacro en el repo | Definir responsable, retención, alertas y hacer simulacro. |
+| Exportación | Conversaciones JSON, CSV e impresión PDF | IMPLEMENTADA EN UI | Endpoints JSON/CSV y botón `Imprimir / Guardar PDF` en `pages/ai/conversations.tsx` | PDF se crea desde el diálogo del navegador; no hay generación PDF en servidor. |
+| QA | Pruebas de aislamiento | PARCIAL (14/14 pruebas locales pasan) | `tests/ownership.test.cjs` valida sesiones individuales y ownership con Prisma simulado | Añadir pruebas E2E e integración con una BD de prueba aislada. |
+| UX / diseño | Paleta de marca | LOCAL SIN DESPLEGAR | Cambios locales en `styles/globals.css` y `tailwind.config.js` | Revisar visualmente y publicar tras completar cambios funcionales. |
+| UX / retro | Bugs específicos | POR CLASIFICAR | `docs/06 Pendientes/Bugs.md` | Aún se necesitan casos reproducibles y resultado esperado. |
 
-- Gmail vía n8n: workflow activo y one-way. Flujo: Gmail Trigger → obtener mensaje → comprobar duplicado mediante etiqueta TELAR/Procesado → clasificar con TELAR AI → aplicar reglas de prioridad y categoría → etiquetar → archivar o marcar importante según las reglas → marcar procesado.
-- El workflow no persiste las clasificaciones de vuelta en TELAR y aún no está versionado en este repo.
+## Despliegue comprobado
 
-## Bloqueos externos
+- Vercel Production sirve el commit `8c5c678` (`fix: grant configured admin global session access`).
+- El commit `8c5c678` (`fix: grant configured admin global session access`) está Ready en Vercel Production y asignado al alias `telar-kappa.vercel.app`.
+- Prueba autenticada con el token de compatibilidad: `POST /api/admin/login` respondió 204; `/api/profiles`, `/api/admin/dashboard`, `/api/ai/conversations` y `/api/ai/knowledge` respondieron 200.
+- El dashboard reportó seis negocios, cinco perfiles, cinco TAGs, 228 conversaciones y cero conversaciones en handoff humano en esa comprobación. La primera página de conversaciones contenía 20 elementos y más páginas disponibles.
+- Tras el deployment, `/api/admin/dashboard` volvió a responder con seis negocios, cinco perfiles, cinco TAG activos y 228 conversaciones. La sesión del navegador no se pudo identificar como login individual o token de compatibilidad.
+- El comportamiento nuevo está desplegado, pero aún falta iniciar sesión individualmente con admin y propietario para validar alcance global y aislamiento antes de retirar tokens legacy.
 
-- WhatsApp Cloud API: bloqueado hasta disponer de un número de WhatsApp Business.
-- NFC físico: bloqueado hasta disponer de permiso o credencial externa.
+## Bloqueos externos y deuda
 
-## Deuda de seguridad
-
-- P0: rotar `x-n8n-secret` expuesto en el workflow Gmail y moverlo a credentials de n8n (deuda introducida por configuración manual, no por código del repo).
-- P1: `ADMIN_TOKEN` y `AI_TOKEN` permanecen como compatibilidad temporal; retirarlos después del despliegue y validación del acceso por usuario.
+- WhatsApp Cloud API: falta número/cuenta de WhatsApp Business y credenciales.
+- NFC físico: falta hardware y autorización.
+- n8n: rotar secreto expuesto, actualizar el workflow con `Idempotency-Key` y `externalId`, y versionar una exportación sin secretos.
+- Producción: faltan monitoreo externo, alertas, política de backups y simulacro de recuperación.
+- Seguridad: mantener el token de compatibilidad solo durante la transición; retirarlo tras validar login individual y aislamiento por propietario.

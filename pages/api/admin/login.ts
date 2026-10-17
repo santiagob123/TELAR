@@ -3,12 +3,16 @@ import { ADMIN_SESSION_COOKIE, createAdminSession } from '../../../lib/admin-ses
 import prisma from '../../../lib/prisma'
 import { createUserSession, userSessionCookie, verifyPassword, USER_SESSION_COOKIE } from '../../../lib/user-session'
 import { consumeLoginRateLimit, respondRateLimited } from '../../../lib/rate-limit'
+import { secureCompare } from '../../../lib/secure-compare'
+import { requireSameOriginMutation } from '../../../lib/request-security'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.status(405).end()
     return
   }
+
+  if (!requireSameOriginMutation(req, res, { requireForAll: true })) return
 
   try {
     const limited = await consumeLoginRateLimit(req)
@@ -25,11 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const configuredToken = process.env.ADMIN_TOKEN
     if (!configuredToken) return res.status(503).json({ error: 'La administración no está configurada.' })
     const token = typeof req.body?.token === 'string' ? req.body.token : ''
-    if (token !== configuredToken) return res.status(401).json({ error: 'Credenciales incorrectas.' })
+    if (!secureCompare(token, configuredToken)) return res.status(401).json({ error: 'Credenciales incorrectas.' })
 
     const secure = process.env.NODE_ENV === 'production' ? '; Secure' : ''
     res.setHeader('Set-Cookie', [
-      `${ADMIN_SESSION_COOKIE}=${createAdminSession(configuredToken)}; Path=/; HttpOnly; SameSite=Lax${secure}`,
+      `${ADMIN_SESSION_COOKIE}=${createAdminSession(configuredToken)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${secure}`,
       `${USER_SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`
     ])
     res.status(204).end()

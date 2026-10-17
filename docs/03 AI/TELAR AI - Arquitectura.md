@@ -30,7 +30,7 @@ ChatBubble en `/` -> /api/chat/message
 
 - `Conversation` y `Message` se persisten en backend.
 - El historial enviado al provider se limita a los últimos seis mensajes.
-- La exportación administrativa está disponible en JSON (`/api/ai/conversations/export-json`) y CSV (`/api/ai/conversations/export-csv`); PDF sigue pendiente.
+- La exportación administrativa está disponible en JSON (`/api/ai/conversations/export-json`) y CSV (`/api/ai/conversations/export-csv`). La UI también ofrece imprimir/guardar como PDF mediante el diálogo del navegador; no es generación PDF del servidor.
 - Agrupa por conversación, ordena conversaciones por última actividad descendente y mensajes cronológicamente.
 - Los filtros `from` y `to` usan fechas de calendario `America/Bogota` y se convierten a límites UTC.
 - El CSV aplana cada mensaje en una fila y protege sus celdas frente a fórmulas de hoja de cálculo.

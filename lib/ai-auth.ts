@@ -2,18 +2,20 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { hasValidAiSession } from './ai-session'
 import { hasValidAdminSession } from './admin-session'
 import prisma from './prisma'
+import { secureCompare } from './secure-compare'
+import { requireSameOriginMutation } from './request-security'
 import { verifyUserSession } from './user-session'
 
 function hasValidAiAuthorization(req: NextApiRequest) {
   const configuredToken = process.env.AI_TOKEN
   if (hasValidAiSession(req.cookies.telar_ai_session)) return true
-  return Boolean(configuredToken && req.headers['x-ai-token'] === configuredToken)
+  return secureCompare(req.headers['x-ai-token'], configuredToken)
 }
 
 function hasValidAdminAuthorization(req: NextApiRequest) {
   const configuredToken = process.env.ADMIN_TOKEN
   if (hasValidAdminSession(req.cookies.telar_admin_session)) return true
-  return Boolean(configuredToken && req.headers['x-admin-token'] === configuredToken)
+  return secureCompare(req.headers['x-admin-token'], configuredToken)
 }
 
 export function requireAiToken(req: NextApiRequest, res: NextApiResponse) {
@@ -25,6 +27,7 @@ export function requireAiToken(req: NextApiRequest, res: NextApiResponse) {
 export type AiAccess = { ownerId: string; isGlobalAdmin: boolean }
 
 export async function requireAiAccess(req: NextApiRequest, res: NextApiResponse): Promise<AiAccess | null> {
+  if (!requireSameOriginMutation(req, res)) return null
   try {
     const session = verifyUserSession(req.cookies.telar_user_session)
     if (session) {

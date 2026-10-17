@@ -70,7 +70,7 @@ function isCasualMessage(message: string): boolean {
     return false
   }
 
-  const casualPatterns = [
+  const casualExactPhrases = [
     'hola',
     'holaa',
     'buenas',
@@ -85,18 +85,29 @@ function isCasualMessage(message: string): boolean {
     'listo',
     'chao',
     'adios',
-    'hasta luego'
+    'hasta luego',
+    'como vamos',
+    'como estas',
+    'que tal',
+    'todo bien'
   ]
 
-  return casualPatterns.some(pattern => {
-    if (normalized === pattern) return true
-    return normalized.startsWith(`${pattern} `)
-  })
+  if (casualExactPhrases.includes(normalized)) return true
+
+  const greetingWithSmallTalk = /^(hola|holaa|buenas|buenos dias|buenas tardes|buenas noches) (como estas|como vas|como vamos|que tal|todo bien|buenos dias|buenas tardes|buenas noches)$/
+  const briefThanks = /^(gracias|muchas gracias)( por (tu )?(ayuda|responder|contestar|la informacion|la respuesta))?$/
+  return greetingWithSmallTalk.test(normalized) || briefThanks.test(normalized)
 }
 
 function getCasualReply(message: string): string {
   const normalized = normalizeCasualText(message)
 
+  if (/^(hola|holaa) (como vamos|como estas|como vas|que tal|todo bien)$/.test(normalized)) {
+    return '¡Todo bien por aquí! 😊 ¿En qué puedo ayudarte?'
+  }
+  if (/^(como vamos|como estas|que tal|todo bien)$/.test(normalized)) {
+    return '¡Todo bien por aquí! 😊 ¿En qué puedo ayudarte?'
+  }
   if (/^(gracias|muchas gracias)/.test(normalized)) return '¡Con gusto! 😊'
   if (/^(perfecto|ok|okay|listo)/.test(normalized)) return '¡Excelente! 😊'
   if (/^(chao|adios|hasta luego)/.test(normalized)) return '¡Hasta luego! 👋'
@@ -194,8 +205,12 @@ function providerErrorDetails(error: unknown) {
   }
 }
 
-function buildSystemPrompt(businessName: string, kbText: string, directKnowledgeInstruction: string) {
-  return `Eres TELAR AI, el asistente virtual de ${businessName}.
+function buildSystemPrompt(businessName: string, kbText: string, directKnowledgeInstruction: string, assistantName: string) {
+  const identityInstruction = assistantName === 'SAPO'
+    ? 'Eres SAPO, el asistente virtual público de TELAR. Si preguntan tu nombre, preséntate como SAPO; TELAR AI es la plataforma que te incorpora.'
+    : `Eres TELAR AI, el asistente virtual de ${businessName}.`
+
+  return `${identityInstruction}
 
 Tu función es ayudar al usuario con información sobre TELAR y sus productos utilizando únicamente el contexto disponible.
 
@@ -278,21 +293,39 @@ export async function answerMessage(
   businessId: string,
   messageText: string,
   conversationId?: string,
-  currentMessageId?: string
+  currentMessageId?: string,
+  onToken?: (chunk: string) => void,
+  assistantName = 'TELAR AI'
 ): Promise<string> {
   if (isCasualMessage(messageText)) {
     console.info('[TELAR AI] fast_path', { reason: 'casual_message' })
-    return getCasualReply(messageText)
+    const reply = getCasualReply(messageText)
+    onToken?.(reply)
+    return reply
   }
 
   if (isSensitiveRequest(messageText)) {
     console.info('[TELAR AI] security_path', { reason: 'sensitive_request' })
+    onToken?.(SECURITY_REPLY)
     return SECURITY_REPLY
   }
 
-  // 1. Cargar base de conocimiento y contexto
-  const kb = await prisma.knowledgeBase.findMany({ where: { businessId } })
-  const business = await prisma.business.findUnique({ where: { id: businessId } })
+  // Load independent context and history reads together; only the latest turns are needed.
+  const historyQuery = conversationId
+    ? prisma.message.findMany({
+      where: {
+        conversationId,
+        ...(currentMessageId ? { id: { not: currentMessageId } } : {})
+      },
+      orderBy: { createdAt: 'desc' },
+      take: currentMessageId ? 6 : 7
+    })
+    : Promise.resolve([])
+  const [kb, business, latestMessages] = await Promise.all([
+    prisma.knowledgeBase.findMany({ where: { businessId } }),
+    prisma.business.findUnique({ where: { id: businessId } }),
+    historyQuery
+  ])
 
   const businessName = business?.name || 'TELAR AI'
   const totalKbChars = kb.reduce((sum, item) => sum + item.content.length + item.title.length, 0)
@@ -318,23 +351,17 @@ export async function answerMessage(
     : ''
 
   // 2. Construir directivas del sistema separando comportamiento del agente de la KB
-  const systemPrompt = buildSystemPrompt(businessName, selectedKbText, directKnowledgeInstruction)
+  const systemPrompt = buildSystemPrompt(businessName, selectedKbText, directKnowledgeInstruction, assistantName)
 
   // 3. Cargar historial cronológico previo si existe una conversación
   let history: Array<{ role: 'user' | 'assistant'; content: string }> = []
   if (conversationId) {
-    const allMessages = await prisma.message.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: 'asc' }
-    })
-
-    // Excluir el mensaje actual utilizando su identidad (id) o la última posición
-    const previousMessages = currentMessageId
-      ? allMessages.filter(m => m.id !== currentMessageId)
-      : allMessages.slice(0, -1)
-
-    const validPreviousMessages = previousMessages.filter(m => m.text.trim().length > 0)
-    const recentMessages = validPreviousMessages.slice(-6)
+    // Descending query takes only recent rows; reverse to restore conversational order.
+    const previousMessages = currentMessageId ? latestMessages : latestMessages.slice(1)
+    const recentMessages = previousMessages
+      .filter(message => message.text.trim().length > 0)
+      .reverse()
+      .slice(-6)
 
     history = recentMessages.map(m => ({
       role: (m.isFromAI ? 'assistant' : 'user') as 'user' | 'assistant',
@@ -342,9 +369,7 @@ export async function answerMessage(
     }))
 
     console.info('[TELAR AI] history_selection', {
-      availableHistoryCount: validPreviousMessages.length,
       selectedHistoryCount: history.length,
-      historyMessageChars: validPreviousMessages.reduce((sum, message) => sum + message.text.length, 0),
       selectedHistoryChars: history.reduce((sum, message) => sum + message.content.length, 0),
       selectedRoles: history.map(message => message.role)
     })
@@ -366,11 +391,15 @@ export async function answerMessage(
   // 4. El proveedor fallback usa la respuesta determinista basada en KnowledgeBase.
   if (getAIProvider() === 'fallback') {
     const fallback = getKnowledgeFallback(kb, messageText)
+    onToken?.(fallback)
     console.info('[TELAR AI] fallback', { reason: 'configured_fallback', usedKeywordMatch: fallback !== FALLBACK_REPLY })
     return fallback
   }
 
   // 5. Invocar al proveedor de IA con protección contra fallas
+  let streamedChars = 0
+  let firstTokenMs: number | null = null
+  const providerStartedAt = Date.now()
   try {
     const messagesForModel: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
       { role: 'system', content: systemPrompt },
@@ -386,15 +415,27 @@ export async function answerMessage(
       selectedHistoryCount: history.length,
       currentUserMessageCount: 1
     })
-    const reply = await generateAIResponse(messagesForModel)
+    const reply = await generateAIResponse(messagesForModel, onToken ? chunk => {
+      streamedChars += chunk.length
+      if (firstTokenMs === null) firstTokenMs = Date.now() - providerStartedAt
+      onToken(chunk)
+    } : undefined)
     const normalizedReply = normalizeBrandVariants(reply)
-    console.info('[TELAR AI] provider_ok', { provider, replyChars: normalizedReply.length })
+    console.info('[TELAR AI] provider_ok', {
+      provider,
+      durationMs: Date.now() - providerStartedAt,
+      firstTokenMs,
+      replyChars: normalizedReply.length,
+      streamed: Boolean(onToken)
+    })
     return normalizedReply
   } catch (error: unknown) {
+    if (onToken && streamedChars > 0) throw error
     const provider = getAIProvider()
     const details = providerErrorDetails(error)
     console.error(`[TELAR AI] ${provider}_error`, details)
     const fallback = getKnowledgeFallback(kb, messageText)
+    onToken?.(fallback)
     console.info('[TELAR AI] fallback', { reason: `${provider}_exception`, usedKeywordMatch: fallback !== FALLBACK_REPLY })
     return fallback
   }

@@ -1,6 +1,6 @@
 # Contexto técnico de TELAR
 
-Documento generado mediante inspección estática del repositorio el 2026-09-26. Describe el código presente; no confirma el despliegue, la configuración efectiva del entorno ni el estado de producción. No se consultó ni modificó la base de datos durante su elaboración.
+El snapshot inicial de las secciones 1–12 fue generado por inspección estática el 2026-09-26 y es histórico. Para el estado actual de código y despliegue, prevalece la sección **Estado vigente de implementación — 2026-10-15**, contrastada con `main`, Vercel Production y las comprobaciones descritas allí.
 
 ## 1. Resumen ejecutivo
 
@@ -291,14 +291,14 @@ No cambies docs/.obsidian ni secretos. Mantén alcance acotado e informa brechas
 ## 12. P0 de seguridad
 
 - Rotar `x-n8n-secret` expuesto en el workflow Gmail externo y moverlo a credentials de n8n. Es una deuda de configuración manual, no de código del repo.
-## Actualización de implementación — 2026-10-15
+## Estado vigente de implementación — 2026-10-15
 
 Esta sección refleja los cambios posteriores a la inspección estática del 2026-09-26; prevalece cuando contradice el snapshot histórico anterior.
 
-### Cambios preparados en el repositorio
+### Cambios en `main` y estado de despliegue
 
 - `getAIContext()` es de lectura. La preparación explícita y sincronización de Knowledge Base usa `ensureAIContext()` desde `POST /api/ai/init` y el seed.
-- Rate limiting está conectado al chat público, mensaje AI privado y endpoints n8n; incluye límites por IP/sesión/owner y `429`. En desarrollo, chat público/privado usan fallback en memoria si falta la tabla; producción permanece fail-closed `503` hasta aplicar la migración.
+- Rate limiting está conectado al chat público, mensaje AI privado y endpoints n8n; incluye límites por IP/sesión/owner y `429`. Las migraciones están aplicadas en la instancia Supabase configurada; verificar otros entornos antes de habilitar el código allí.
 - `GET /api/health` comprueba conexión PostgreSQL y solo responde estados genéricos.
 - OpenAI tiene timeout configurable mediante `OPENAI_TIMEOUT_MS` (predeterminado 60 s).
 - El chat público restaura hasta 100 mensajes desde `sessionStorage` de la pestaña.
@@ -308,8 +308,9 @@ Esta sección refleja los cambios posteriores a la inspección estática del 202
 - El backfill de negocios tiene script con simulación por defecto; la asignación requiere mapping revisado y `--apply`.
 - El perfil permite editar el nombre del negocio y el título público por separado. TAG SSR devuelve 404 para identificadores inexistentes. Las rutas legacy de AI redirigen a `/ai`.
 - README y variables de ejemplo documentan PostgreSQL, `DIRECT_URL`, límites y endpoints actuales.
-- El login por correo y contraseña usa hash scrypt y cookie HMAC común de ocho horas; las rutas privadas resuelven al propietario autenticado. El alta se hace por CLI, sin registro público. Los tokens anteriores siguen como compatibilidad temporal.
+- El login por correo y contraseña usa hash scrypt y cookie HMAC común de ocho horas; las rutas privadas resuelven al propietario autenticado. El alta se hace por CLI, sin registro público. El código está desplegado en Vercel Production; el token global continúa temporalmente como compatibilidad.
 - La sincronización de Knowledge Base actualiza entradas oficiales, elimina sus duplicados y quita entradas oficiales obsoletas sin borrar entradas personalizadas.
+- El 2026-10-15 se configuró `ADMIN_USER_ID` en Vercel Production para `admin@example.com`, se redeplegó y promovió el commit `c1374b6` al alias `telar-kappa.vercel.app`. El login de compatibilidad y las APIs de perfiles, dashboard, conversaciones y Knowledge Base respondieron correctamente. Esta verificación no cubre el login individual del propietario.
 
 ### Migraciones recientes y estado actual
 
@@ -325,14 +326,14 @@ El 2026-10-15 se aplicaron estas cinco migraciones a la instancia Supabase confi
 
 - `npx tsc --noEmit`: correcto.
 - `npx prisma validate`: schema válido.
-- `npx prisma generate`: no completó por `EPERM` en `node_modules/@prisma/client`; no se detuvieron procesos Node.
+- `npx prisma generate`: en una ejecución anterior no completó por `EPERM` en `node_modules/@prisma/client`; no se detuvieron procesos Node. Posteriormente el usuario confirmó que pudo generar Prisma y que un build local falló por lint; el commit `c1374b6` corrigió esos errores y Vercel lo desplegó como Ready.
 - No se ejecutaron pruebas. Las migraciones de la instancia Supabase configurada se aplicaron posteriormente el 2026-10-15.
 
 ### Pendientes externos o que necesitan decisión
 
 - Rotar `N8N_WEBHOOK_SECRET` y actualizar/versionar el workflow en n8n; debe enviar `Idempotency-Key` en chat y `externalId` al clasificador.
 - Verificar las migraciones y el mapping en cada entorno adicional antes de aplicar allí los cambios; en el Supabase configurado aquí las migraciones están al día y los cuatro negocios aprobados ya están asignados.
-- El modelo de propietario quedó definido por el usuario. `SESSION_SECRET` está configurado en el `.env` local y en Vercel Production; la cuenta demo está provisionada. El código local de autenticación todavía debe desplegarse para habilitar el login individual en producción.
+- El modelo de propietario quedó definido por el usuario. `SESSION_SECRET` está configurado en el `.env` local y en Vercel Production; la cuenta demo está provisionada. Falta validar el login individual y el aislamiento del propietario en producción antes de retirar los tokens legacy.
 - Backups, métricas, alertas y despliegues dependen del proveedor/operación.
 - WhatsApp y NFC siguen bloqueados por terceros.
 - La búsqueda semántica requiere decidir proveedor/modelo de embeddings y almacenamiento vectorial.

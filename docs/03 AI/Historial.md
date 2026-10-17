@@ -13,6 +13,8 @@ Los logs registran:
 - caracteres seleccionados;
 - roles seleccionados.
 
-## Limitación de UI
+## Restauración en la interfaz
 
-El backend persiste `Conversation` y `Message`, y el provider recibe hasta los seis mensajes previos de la conversación. El ChatBubble mantiene la vista actual en estado React y `sessionStorage` solo para el identificador de sesión; todavía no recupera visualmente el historial después de recargar. Esto es una mejora UX, no una falta de persistencia backend.
+El ChatBubble persiste el identificador de sesión y los últimos 100 mensajes en `sessionStorage`. Al recargar la misma pestaña, restaura la vista local mientras conserva la persistencia backend en `Conversation` y `Message`. No se sincroniza el historial visual entre dispositivos ni navegadores.
+
+La selección de contexto para el provider usa hasta los seis mensajes anteriores no vacíos; ese límite es independiente de los 100 mensajes visibles restaurados por el cliente.
