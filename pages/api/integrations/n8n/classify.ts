@@ -24,6 +24,19 @@ const ACTIONS = new Set<Classification['accion_sugerida']>([
   'responder', 'revisar', 'archivar', 'eliminar', 'ignorar', 'guardar', 'ninguna'
 ])
 
+const CLASSIFICATION_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    categoria: { type: 'string', enum: [...CATEGORIES] },
+    prioridad: { type: 'string', enum: [...PRIORITIES] },
+    resumen: { type: 'string' },
+    requiere_accion: { type: 'boolean' },
+    accion_sugerida: { type: 'string', enum: [...ACTIONS] }
+  },
+  required: ['categoria', 'prioridad', 'resumen', 'requiere_accion', 'accion_sugerida'],
+  propertyOrdering: ['categoria', 'prioridad', 'resumen', 'requiere_accion', 'accion_sugerida']
+} satisfies Record<string, unknown>
+
 const CLASSIFICATION_PROMPT = `Eres un clasificador de correos electrónicos.
 
 Tu única tarea es analizar el correo proporcionado y devolver una clasificación estructurada.
@@ -68,13 +81,17 @@ function extractJsonObject(value: string): string | null {
   return start >= 0 && end > start ? withoutFence.slice(start, end + 1) : null
 }
 
-function parseClassification(value: string): Classification | null {
+type ClassificationParseResult =
+  | { classification: Classification; failureReason: null }
+  | { classification: null; failureReason: 'json_not_found' | 'invalid_json' | 'invalid_fields' }
+
+function parseClassification(value: string): ClassificationParseResult {
   const json = extractJsonObject(value)
-  if (!json) return null
+  if (!json) return { classification: null, failureReason: 'json_not_found' }
 
   try {
     const parsed: unknown = JSON.parse(json)
-    if (!isRecord(parsed)) return null
+    if (!isRecord(parsed)) return { classification: null, failureReason: 'invalid_fields' }
 
     const { categoria, prioridad, resumen, requiere_accion: requiresAction, accion_sugerida: suggestedAction } = parsed
     if (
@@ -84,18 +101,21 @@ function parseClassification(value: string): Classification | null {
       typeof requiresAction !== 'boolean' ||
       typeof suggestedAction !== 'string' || !ACTIONS.has(suggestedAction as Classification['accion_sugerida'])
     ) {
-      return null
+      return { classification: null, failureReason: 'invalid_fields' }
     }
 
     return {
-      categoria: categoria as Classification['categoria'],
-      prioridad: prioridad as Classification['prioridad'],
-      resumen: resumen.trim(),
-      requiere_accion: requiresAction,
-      accion_sugerida: suggestedAction as Classification['accion_sugerida']
+      classification: {
+        categoria: categoria as Classification['categoria'],
+        prioridad: prioridad as Classification['prioridad'],
+        resumen: resumen.trim(),
+        requiere_accion: requiresAction,
+        accion_sugerida: suggestedAction as Classification['accion_sugerida']
+      },
+      failureReason: null
     }
   } catch {
-    return null
+    return { classification: null, failureReason: 'invalid_json' }
   }
 }
 
@@ -153,19 +173,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rawResponse = await generateAIResponse([
       { role: 'system', content: CLASSIFICATION_PROMPT },
       { role: 'user', content: classifierInput }
-    ])
-    const classification = parseClassification(rawResponse)
+    ], undefined, {
+      responseFormat: 'json',
+      responseSchema: CLASSIFICATION_RESPONSE_SCHEMA
+    })
+    const parseResult = parseClassification(rawResponse)
 
     console.info('[TELAR AI] n8n_classify', {
       provider: getAIProvider(),
       durationMs: Date.now() - startedAt,
       responseChars: rawResponse.length,
-      valid: Boolean(classification)
+      valid: Boolean(parseResult.classification),
+      failureReason: parseResult.failureReason
     })
 
-    if (!classification) {
+    if (!parseResult.classification) {
       return res.status(502).json({ error: 'AI classification failed' })
     }
+    const classification = parseResult.classification
 
     const context = await getPublicAIContext()
     if (typeof externalId === 'string') {

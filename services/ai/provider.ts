@@ -5,6 +5,11 @@ export type AIProviderMessage = {
   content: string
 }
 
+export type AIResponseOptions = {
+  responseFormat?: 'json'
+  responseSchema?: Record<string, unknown>
+}
+
 const DEFAULT_OPENAI_MODEL = 'gpt-4o'
 const DEFAULT_OLLAMA_BASE_URL = 'http://localhost:11434'
 const DEFAULT_GEMINI_MODEL = 'gemini-3.6-flash'
@@ -48,7 +53,7 @@ function qwenNeedsReasoning(messages: AIProviderMessage[]) {
   return question.length > 180 || /\b(analiza|compara|paso a paso|planifica|resuelve|calcula|evalua|evalúa|diferencia)\b/i.test(question)
 }
 
-async function generateWithOllama(messages: AIProviderMessage[], onToken?: (chunk: string) => void): Promise<string> {
+async function generateWithOllama(messages: AIProviderMessage[], onToken?: (chunk: string) => void, options?: AIResponseOptions): Promise<string> {
   const { baseUrl, model } = getOllamaConfig()
   if (!model) throw new Error('OLLAMA_MODEL no está configurado')
 
@@ -65,6 +70,7 @@ async function generateWithOllama(messages: AIProviderMessage[], onToken?: (chun
         model,
         messages,
         stream: Boolean(onToken),
+        ...(options?.responseFormat === 'json' ? { format: 'json' } : {}),
         ...(/(^|\/)qwen3(?=[:@/-]|$)/i.test(model) ? { think: qwenNeedsReasoning(messages) } : {}),
         keep_alive: '5m',
         options: { temperature: 0.35, num_predict: 300 }
@@ -152,18 +158,22 @@ async function generateWithOllama(messages: AIProviderMessage[], onToken?: (chun
   }
 }
 
-async function generateWithOpenAI(messages: AIProviderMessage[], onToken?: (chunk: string) => void): Promise<string> {
+async function generateWithOpenAI(messages: AIProviderMessage[], onToken?: (chunk: string) => void, options?: AIResponseOptions): Promise<string> {
   const { hasKey, model, apiKey } = getOpenAiConfig()
   if (!hasKey) throw new Error('OPENAI_API_KEY no está configurada')
 
   const client = new OpenAI({ apiKey, timeout: getProviderTimeoutMs() })
+  const responseFormat = options?.responseFormat === 'json'
+    ? { response_format: { type: 'json_object' as const } }
+    : {}
   if (onToken) {
     const stream = await client.chat.completions.create({
       model,
       messages,
       max_tokens: 300,
       temperature: 0.4,
-      stream: true
+      stream: true,
+      ...responseFormat
     })
     let streamedReply = ''
     for await (const chunk of stream) {
@@ -181,7 +191,8 @@ async function generateWithOpenAI(messages: AIProviderMessage[], onToken?: (chun
     model,
     messages,
     max_tokens: 300,
-    temperature: 0.4
+    temperature: 0.4,
+    ...responseFormat
   })
   const reply = response.choices?.[0]?.message?.content?.trim()
   if (!reply) throw new Error('OpenAI devolvió una respuesta vacía')
@@ -229,7 +240,7 @@ async function readGeminiStream(body: ReadableStream<Uint8Array>, onToken: (chun
   return finalReply
 }
 
-async function generateWithGemini(messages: AIProviderMessage[], onToken?: (chunk: string) => void): Promise<string> {
+async function generateWithGemini(messages: AIProviderMessage[], onToken?: (chunk: string) => void, options?: AIResponseOptions): Promise<string> {
   const { apiKey, model } = getGeminiConfig()
   if (!apiKey) throw new Error('GEMINI_API_KEY no está configurada')
 
@@ -260,7 +271,18 @@ async function generateWithGemini(messages: AIProviderMessage[], onToken?: (chun
           }
         } : {}),
         contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 300 }
+        generationConfig: {
+          temperature: options?.responseFormat === 'json' ? 0.2 : 0.4,
+          maxOutputTokens: 300,
+          ...(options?.responseFormat === 'json' ? {
+            responseFormat: {
+              text: {
+                mimeType: 'APPLICATION_JSON',
+                ...(options.responseSchema ? { schema: options.responseSchema } : {})
+              }
+            }
+          } : {})
+        }
       }),
       signal: controller.signal
     })
@@ -328,10 +350,10 @@ export function getAIProvider() {
   return getConfiguredProvider()
 }
 
-export async function generateAIResponse(messages: AIProviderMessage[], onToken?: (chunk: string) => void): Promise<string> {
+export async function generateAIResponse(messages: AIProviderMessage[], onToken?: (chunk: string) => void, options?: AIResponseOptions): Promise<string> {
   const provider = getConfiguredProvider()
-  if (provider === 'ollama') return generateWithOllama(messages, onToken)
-  if (provider === 'openai') return generateWithOpenAI(messages, onToken)
-  if (provider === 'gemini') return generateWithGemini(messages, onToken)
+  if (provider === 'ollama') return generateWithOllama(messages, onToken, options)
+  if (provider === 'openai') return generateWithOpenAI(messages, onToken, options)
+  if (provider === 'gemini') return generateWithGemini(messages, onToken, options)
   throw new Error('Proveedor configurado como fallback')
 }
