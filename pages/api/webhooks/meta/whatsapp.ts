@@ -7,24 +7,36 @@ const N8N_TIMEOUT_MS = 8_000
 
 class PayloadTooLargeError extends Error {}
 
-async function readRawBody(req: NextApiRequest): Promise<Buffer> {
-  const chunks: Buffer[] = []
-  let totalBytes = 0
-  let tooLarge = false
+function readRawBody(req: NextApiRequest): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let totalBytes = 0
+    let tooLarge = false
 
-  for await (const chunk of req) {
-    const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
-    totalBytes += part.length
-    if (totalBytes > MAX_BODY_BYTES) {
-      tooLarge = true
-      chunks.length = 0
-      continue
-    }
-    if (!tooLarge) chunks.push(part)
-  }
+    req.on('data', (chunk: Buffer | string) => {
+      if (tooLarge) return
 
-  if (tooLarge) throw new PayloadTooLargeError()
-  return Buffer.concat(chunks, totalBytes)
+      const part = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+      totalBytes += part.length
+      if (totalBytes > MAX_BODY_BYTES) {
+        tooLarge = true
+        chunks.length = 0
+        return
+      }
+      chunks.push(part)
+    })
+
+    req.once('end', () => {
+      if (tooLarge) {
+        reject(new PayloadTooLargeError())
+        return
+      }
+      resolve(Buffer.concat(chunks, totalBytes))
+    })
+
+    req.once('error', reject)
+    req.once('aborted', () => reject(new Error('Request body was aborted')))
+  })
 }
 
 function singleQueryValue(req: NextApiRequest, key: string): string | undefined {
