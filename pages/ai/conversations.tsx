@@ -28,6 +28,8 @@ export default function AiConversations() {
   const [humanErrors, setHumanErrors] = useState<Record<string, string>>({})
   const [sendingHuman, setSendingHuman] = useState<string | null>(null)
   const [reopening, setReopening] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleteErrors, setDeleteErrors] = useState<Record<string, string>>({})
   const filters = new URLSearchParams()
   if (appliedFromDate) filters.set('from', appliedFromDate)
   if (appliedToDate) filters.set('to', appliedToDate)
@@ -243,6 +245,36 @@ export default function AiConversations() {
     }
   }
 
+  async function deleteConversation(conversation: any) {
+    const verified = window.confirm(
+      `Confirma que verificaste la solicitud de ${conversation.from} y que corresponde eliminar su conversación. Se borrarán sus mensajes de la base operativa de TELAR. No se eliminan historiales de n8n ni respaldos externos; esta acción no se puede deshacer.`
+    )
+    if (!verified || window.prompt('Escribe ELIMINAR para confirmar.') !== 'ELIMINAR') return
+
+    setDeleting(conversation.id)
+    setDeleteErrors(previous => ({ ...previous, [conversation.id]: '' }))
+    try {
+      const response = await fetch(`/api/ai/conversations/${conversation.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'ELIMINAR' })
+      })
+      if (response.status === 401) {
+        await router.replace('/admin/login')
+        return
+      }
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({}))
+        throw new Error(result?.error || 'No se pudo eliminar la conversación.')
+      }
+      await mutate()
+    } catch (error: any) {
+      setDeleteErrors(previous => ({ ...previous, [conversation.id]: error.message || 'No se pudo eliminar la conversación.' }))
+    } finally {
+      setDeleting(null)
+    }
+  }
+
   return (
     <div>
       <div className="mb-7">
@@ -289,6 +321,16 @@ export default function AiConversations() {
                 ) : (
                   <button type="button" onClick={() => markHuman(c.id)} className="rounded-lg border border-[#e3b3ae] px-3 py-2 text-sm font-semibold text-[#a33b32]">Derivar a una persona</button>
                 )}
+                {data?.canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => void deleteConversation(c)}
+                    disabled={deleting === c.id}
+                    className="ml-2 mt-2 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50"
+                  >
+                    {deleting === c.id ? 'Eliminando…' : 'Eliminar tras verificar solicitud'}
+                  </button>
+                )}
               </div>
             </div>
             <div className="mt-2">
@@ -302,6 +344,7 @@ export default function AiConversations() {
               ))}
             </div>
             {humanErrors[c.id] && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{humanErrors[c.id]}</p>}
+            {deleteErrors[c.id] && <p role="alert" className="mt-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{deleteErrors[c.id]}</p>}
             {c.state === 'human' && (
               <form onSubmit={event => { event.preventDefault(); void sendHumanMessage(c.id) }} className="mt-4 flex gap-2 border-t border-[#dfe7e5] pt-4">
                 <input

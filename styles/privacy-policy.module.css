@@ -1,0 +1,155 @@
+.page {
+  width: min(100%, 900px);
+  margin: 0 auto;
+  color: var(--telar-lino);
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(111, 179, 192, .3);
+  border-radius: 26px;
+  padding: clamp(28px, 5vw, 56px);
+  background:
+    radial-gradient(ellipse at 88% 4%, rgba(66, 129, 143, .2), transparent 42%),
+    linear-gradient(140deg, rgba(27, 47, 71, .98), rgba(12, 24, 38, .98));
+  box-shadow: 0 22px 56px rgba(0, 0, 0, .24);
+}
+
+.eyebrow {
+  color: var(--telar-oro);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.hero h1 {
+  max-width: 720px;
+  margin: 18px 0 14px;
+  color: var(--telar-lino);
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -.045em;
+}
+
+.hero p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--telar-humo);
+  font-size: clamp(1rem, 2vw, 1.12rem);
+  line-height: 1.75;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  margin-top: 30px;
+  color: var(--telar-teal-luz);
+  font-size: .82rem;
+}
+
+.document {
+  display: grid;
+  gap: 0;
+  margin-top: 22px;
+  border: 1px solid rgba(36, 64, 94, .9);
+  border-radius: 22px;
+  padding: clamp(24px, 4vw, 44px);
+  background: rgba(21, 37, 56, .82);
+}
+
+.document section + section {
+  margin-top: 28px;
+  border-top: 1px solid rgba(36, 64, 94, .8);
+  padding-top: 27px;
+}
+
+.document h2 {
+  margin: 0 0 12px;
+  color: var(--telar-lino);
+  font-size: clamp(1.08rem, 2.3vw, 1.3rem);
+  letter-spacing: -.02em;
+}
+
+.document p,
+.document li {
+  color: var(--telar-humo);
+  font-size: .98rem;
+  line-height: 1.8;
+}
+
+.document p {
+  margin: 0 0 12px;
+}
+
+.document p:last-child {
+  margin-bottom: 0;
+}
+
+.document ul {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding-left: 22px;
+}
+
+.document li::marker {
+  color: var(--telar-oro);
+}
+
+.document strong {
+  color: var(--telar-lino);
+}
+
+.document a,
+.backLink a {
+  color: var(--telar-teal-luz);
+  text-decoration-color: rgba(111, 179, 192, .5);
+  text-underline-offset: 3px;
+}
+
+.document a:hover,
+.backLink a:hover {
+  color: var(--telar-oro);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 32px;
+  border: 1px solid rgba(111, 179, 192, .24);
+  border-radius: 14px;
+  padding: 16px 18px;
+  background: rgba(12, 24, 38, .56);
+  color: var(--telar-lino);
+  font-size: .92rem;
+}
+
+.backLink {
+  margin: 20px 4px 0;
+  font-size: .9rem;
+}
+
+@media (max-width: 560px) {
+  .hero {
+    border-radius: 20px;
+  }
+
+  .document {
+    border-radius: 18px;
+  }
+
+  .document p,
+  .document li {
+    font-size: .94rem;
+  }
+
+  .footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       pageValue,
       pageSizeValue
     )
-    return res.json(conversations)
+    return res.json({ ...conversations, canDelete: access.isGlobalAdmin })
   } catch (error) {
     if (error instanceof ConversationDateFilterError) {
       return res.status(400).json({ error: error.message })
